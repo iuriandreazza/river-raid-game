@@ -3,7 +3,7 @@ import { replayProblem, type Replay } from '../../shared/game/replay.ts';
 import { INITIALS_LENGTH, isValidInitials } from '../../shared/initials.ts';
 import { invalid, valid, type Parsed } from './parsed.ts';
 
-/** Generous for the UUIDs we issue, small enough that nobody can use the field to stuff data. */
+/** Generous for the ids we issue (22 characters), small enough that nobody can use the field to stuff data. */
 export const MAX_SESSION_ID_LENGTH = 64;
 
 export interface ScoreSubmission {

@@ -1,5 +1,4 @@
 import { serve } from '@hono/node-server';
-import { randomUUID } from 'node:crypto';
 import { mkdirSync, statSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { LeaderboardService } from './application/leaderboard-service.ts';
@@ -7,6 +6,7 @@ import { loadConfig } from './infrastructure/config.ts';
 import { EngineRunVerifier } from './infrastructure/engine-run-verifier.ts';
 import { createApp } from './infrastructure/http/create-app.ts';
 import { HTTP_SERVER_LIMITS } from './infrastructure/http/server-limits.ts';
+import { createSessionId } from './infrastructure/session-id.ts';
 import { SqliteLeaderboardStore } from './infrastructure/sqlite-leaderboard-store.ts';
 import { systemClock } from './infrastructure/system-clock.ts';
 
@@ -21,7 +21,7 @@ const store = new SqliteLeaderboardStore(config.databasePath);
 const service = new LeaderboardService({
   store,
   clock: systemClock,
-  ids: { next: () => randomUUID() },
+  ids: { next: createSessionId },
   verifier: new EngineRunVerifier(),
 });
 const app = createApp({
