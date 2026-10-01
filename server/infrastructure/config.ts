@@ -4,6 +4,8 @@ const DEFAULT_DATABASE_PATH = 'data/leaderboard.sqlite';
 const DEFAULT_STATIC_DIR = 'dist';
 
 const PORT_PATTERN = /^[0-9]{1,5}$/;
+/** A commit hash, SHA-1 or SHA-256, in lower case. */
+const REVISION_PATTERN = /^[0-9a-f]{7,64}$/;
 const TRUST_PROXY_PATTERN = /^[0-9]{1,2}$/;
 
 export interface ServerConfig {
@@ -14,6 +16,8 @@ export interface ServerConfig {
   /** How many reverse proxies stand in front of the server, each appending to X-Forwarded-For; 0 for none. */
   readonly trustProxy: number;
   readonly logClientAddress: boolean;
+  /** The commit this build comes from, set by the image build; undefined for a local run. */
+  readonly revision: string | undefined;
 }
 
 /** A variable that is set but blank counts as unset, as `.env` files often declare `NAME=` to mean "default". */
@@ -53,6 +57,16 @@ function parseFlag(name: string, rawFlag: string | undefined): boolean {
   return flag === 'true';
 }
 
+function parseRevision(rawRevision: string | undefined): string | undefined {
+  if (rawRevision === undefined) {
+    return undefined;
+  }
+  if (!REVISION_PATTERN.test(rawRevision)) {
+    throw new Error(`APP_REVISION must be a lower case commit hash, got "${rawRevision}".`);
+  }
+  return rawRevision;
+}
+
 function resolveStaticDir(configured: string | undefined, isDirectory: (path: string) => boolean): string | undefined {
   if (configured === undefined) {
     return isDirectory(DEFAULT_STATIC_DIR) ? DEFAULT_STATIC_DIR : undefined;
@@ -76,5 +90,6 @@ export function loadConfig(env: NodeJS.ProcessEnv, isDirectory: (path: string) =
     staticDir: resolveStaticDir(readVariable(env, 'STATIC_DIR'), isDirectory),
     trustProxy: parseTrustProxy(readVariable(env, 'TRUST_PROXY')),
     logClientAddress: parseFlag('LOG_CLIENT_ADDRESS', readVariable(env, 'LOG_CLIENT_ADDRESS')),
+    revision: parseRevision(readVariable(env, 'APP_REVISION')),
   };
 }

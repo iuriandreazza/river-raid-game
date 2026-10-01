@@ -23,6 +23,9 @@ COPY --from=build /app/dist-server ./dist-server
 RUN mkdir /data && chown node:node /data
 VOLUME /data
 USER node
+# Last, so that a new commit does not invalidate the layers above it.
+ARG REVISION=""
+ENV APP_REVISION=$REVISION
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
   CMD node -e "fetch('http://127.0.0.1:' + (process.env.PORT || 8080) + '/api/health').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"

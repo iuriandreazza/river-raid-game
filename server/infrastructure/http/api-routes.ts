@@ -2,6 +2,7 @@ import { Hono, type Context, type MiddlewareHandler } from 'hono';
 import { replayTicks } from '../../../shared/game/replay.ts';
 import type {
   CreateSessionResponse,
+  HealthResponse,
   LeaderboardEntry,
   SubmitScoreResponse,
   TopScoresResponse,
@@ -55,7 +56,7 @@ function refusalLogFields({ code, reason }: Refusal, submission: ScoreSubmission
   };
 }
 
-export function createApiRoutes(service: LeaderboardService, security: ResolvedSecuritySettings): Hono {
+export function createApiRoutes(service: LeaderboardService, security: ResolvedSecuritySettings, revision?: string): Hono {
   const record = createSecurityEventRecorder(security);
   const guards = createRequestGuards(security, record);
   const { rateLimits } = security;
@@ -70,7 +71,8 @@ export function createApiRoutes(service: LeaderboardService, security: ResolvedS
   api.use('*', neverCache);
   api.onError(handleUnexpectedError);
 
-  api.get('/health', (c) => c.json({ status: 'ok' }));
+  const health: HealthResponse = revision === undefined ? { status: 'ok' } : { status: 'ok', revision };
+  api.get('/health', (c) => c.json(health));
 
   api.post('/sessions', guards.limit(rateLimits.startSession), ...guards.jsonBody(MAX_STRAY_BODY_BYTES), (c) => {
     const body: CreateSessionResponse = { sessionId: service.startSession().id };

@@ -32,6 +32,14 @@ describe('GET /api/health', () => {
     expect(response.headers.get('cache-control')).toBe('no-store');
     expect(await response.json()).toEqual({ status: 'ok' });
   });
+
+  it('says which commit it was built from when the build tells it, so that a deploy can prove what runs', async () => {
+    const { app } = createWorld({ revision: '9052bb9a1c3e4d5f60718293a4b5c6d7e8f90123' });
+
+    const response = await send(app, 'GET', '/api/health');
+
+    expect(await response.json()).toEqual({ status: 'ok', revision: '9052bb9a1c3e4d5f60718293a4b5c6d7e8f90123' });
+  });
 });
 
 describe('POST /api/sessions', () => {
