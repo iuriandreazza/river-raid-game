@@ -39,10 +39,11 @@ export function difficultyFor(sectionIndex: number): Difficulty {
       ['helicopter', 3 + Math.floor(progress / 6)],
       ['jet', jetWeight],
     ],
+    // The jet itself crosses the river at 1 column per tick, and so do the first jets; the rest start slower.
     speeds: {
-      tanker: Math.min(0.9, 0.45 + 0.02 * progress),
-      helicopter: Math.min(1.6, 0.8 + 0.035 * progress),
-      jet: Math.min(3, 2.4 + 0.025 * progress),
+      tanker: Math.min(0.5, 0.25 + 0.01 * progress),
+      helicopter: Math.min(0.8, 0.4 + 0.017 * progress),
+      jet: Math.min(2, 1 + 0.04 * progress),
     },
     minIslandChannel: Math.max(24, 40 - Math.floor(progress / 2)),
   };

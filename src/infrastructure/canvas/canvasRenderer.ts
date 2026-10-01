@@ -8,7 +8,7 @@ import {
   SCREEN_WIDTH,
 } from '../../domain/constants.ts';
 import type { Enemy, GameState } from '../../domain/types.ts';
-import { screenRowOf } from '../../domain/view.ts';
+import { jetColumn, screenRowOf } from '../../domain/view.ts';
 import { drawDashboard } from './dashboard.ts';
 import { drawExplosion } from './explosions.ts';
 import { COLORS } from './palette.ts';
@@ -69,7 +69,7 @@ export class CanvasRenderer implements RendererPort {
   }
 
   private drawJet(state: GameState): void {
-    this.blit(this.sprites.jet(), state.playerX, PLAYER_NOSE_ROW);
+    this.blit(this.sprites.jet(), jetColumn(state.playerX), PLAYER_NOSE_ROW);
   }
 
   private drawGameOver(): void {

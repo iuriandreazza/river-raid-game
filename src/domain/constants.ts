@@ -28,7 +28,12 @@ export const PLAYER_WIDTH = 8;
 export const PLAYER_HEIGHT = 10;
 /** Screen row (inside the playfield) where the jet's nose is drawn. */
 export const PLAYER_NOSE_ROW = 143;
-export const PLAYER_SPEED_X = 2;
+/**
+ * Sideways speed in columns per tick. A jet starts slowly, so a tap makes a fine adjustment, and reaches
+ * full speed once the same direction has been held for a moment, as measured on a real console.
+ */
+export const LATERAL_SPEED = { start: 0.5, full: 1 } as const;
+export const LATERAL_RAMP_TICKS = 12;
 
 /** Silhouette of the jet, nose first. It is both the hitbox and the base of the sprite. */
 export const PLAYER_SHAPE: readonly string[] = [
@@ -73,9 +78,6 @@ export const OBJECT_SIZES: Record<ObjectKind, { width: number; height: number }>
   jet: { width: 9, height: 6 },
   fuel: { width: 9, height: 24 },
 };
-
-/** A jet starts its pass when it is this many rows ahead of the player's nose. */
-export const JET_TRIGGER_ROWS = 60;
 
 // Timings (ticks)
 export const DEATH_TICKS = 100;

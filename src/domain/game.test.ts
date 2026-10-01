@@ -4,6 +4,8 @@ import {
   DEATH_TICKS,
   EXTRA_JET_EVERY,
   FUEL_DRAIN_PER_TICK,
+  LATERAL_RAMP_TICKS,
+  LATERAL_SPEED,
   MAX_DISPLAYED_SCORE,
   MAX_RESERVE_JETS,
   OBJECT_SIZES,
@@ -100,14 +102,48 @@ describe('flying', () => {
 
   it('steers sideways and stays on screen', () => {
     const state = openGame();
-    run(state, 5, input({ left: true }));
-    expect(state.playerX).toBe(66);
-    run(state, 5, input({ right: true }));
+    run(state, 4, input({ left: true }));
+    expect(state.playerX).toBe(76 - 4 * LATERAL_SPEED.start);
+    run(state, 4, input({ right: true }));
     expect(state.playerX).toBe(76);
 
-    state.playerX = 1;
+    state.playerX = 0.25;
     advance(state, input({ left: true }));
     expect(state.playerX).toBe(0);
+  });
+
+  it('starts sideways slowly and reaches full speed after holding the direction for a moment', () => {
+    const state = openGame();
+    const start = state.playerX;
+
+    run(state, LATERAL_RAMP_TICKS, input({ right: true }));
+    expect(state.playerX - start).toBeCloseTo(LATERAL_RAMP_TICKS * LATERAL_SPEED.start);
+
+    run(state, 10, input({ right: true }));
+    expect(state.playerX - start).toBeCloseTo(LATERAL_RAMP_TICKS * LATERAL_SPEED.start + 10 * LATERAL_SPEED.full);
+  });
+
+  it('starts the sideways ramp over when the direction changes or the stick is released', () => {
+    const state = openGame();
+    run(state, LATERAL_RAMP_TICKS + 5, input({ right: true }));
+
+    const beforeReversing = state.playerX;
+    run(state, 1, input({ left: true }));
+    expect(state.playerX).toBe(beforeReversing - LATERAL_SPEED.start);
+
+    run(state, LATERAL_RAMP_TICKS + 5, input({ left: true }));
+    run(state, 1, NO_INPUT);
+    const beforeTapping = state.playerX;
+    run(state, 1, input({ left: true }));
+    expect(state.playerX).toBe(beforeTapping - LATERAL_SPEED.start);
+  });
+
+  it('moves sideways at the same speed whatever the scroll speed', () => {
+    const slow = openGame();
+    const fast = openGame();
+    run(slow, 30, input({ right: true, down: true }));
+    run(fast, 30, input({ right: true, up: true }));
+    expect(slow.playerX).toBe(fast.playerX);
   });
 });
 
@@ -359,16 +395,27 @@ describe('enemies', () => {
   it('send jets across the whole screen once the player gets close, then forget them', () => {
     const state = openGame();
     const { width } = OBJECT_SIZES.jet;
-    const jet = enemyAhead(state, 'jet', 200, { x: -width, vx: 2.4, active: false });
+    const jet = enemyAhead(state, 'jet', 200, { x: -width, vx: 1, active: false });
 
-    run(state, 10);
+    run(state, 100);
     expect(jet.active).toBe(false);
     expect(jet.x).toBe(-width);
 
-    run(state, 150);
+    run(state, 20);
     expect(jet.active).toBe(true);
-    run(state, 100);
+    run(state, 250);
     expect(state.enemies).not.toContain(jet);
+  });
+
+  it('time their pass so that a jet crosses the middle of the river as the player flies by at normal speed', () => {
+    const state = openGame();
+    const { width } = OBJECT_SIZES.jet;
+    const jet = enemyAhead(state, 'jet', 300, { x: -width, vx: 1.5, active: false });
+
+    while (noseRowOf(state.scroll) < jet.y) run(state, 1);
+
+    const jetMiddle = jet.x + width / 2;
+    expect(Math.abs(jetMiddle - SCREEN_WIDTH / 2)).toBeLessThan(3);
   });
 
   it('are created as the river scrolls into view', () => {

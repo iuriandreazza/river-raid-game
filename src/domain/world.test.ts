@@ -3,9 +3,9 @@ import {
   BANK_SLOPE,
   BRIDGE_CHANNEL_WIDTH,
   BRIDGE_HEIGHT,
+  LATERAL_SPEED,
   MIN_BANK_WIDTH,
   MIN_CHANNEL_WIDTH,
-  PLAYER_SPEED_X,
   SCREEN_WIDTH,
   SCROLL_SPEEDS,
   SECTION_LENGTH,
@@ -71,8 +71,8 @@ describe('World', () => {
     expect(problems).toEqual([]);
   });
 
-  it('can always be followed at the fastest scroll speed', () => {
-    expect(BANK_SLOPE * SCROLL_SPEEDS.fast).toBeLessThanOrEqual(PLAYER_SPEED_X);
+  it('can always be followed at normal speed (slowing down is how to follow it at the fastest)', () => {
+    expect(BANK_SLOPE * SCROLL_SPEEDS.normal).toBeLessThanOrEqual(LATERAL_SPEED.full);
   });
 
   it('only puts islands in dark-green sections', () => {

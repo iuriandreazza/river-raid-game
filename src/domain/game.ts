@@ -5,7 +5,8 @@ import {
   EXPLOSION_TICKS,
   EXTRA_JET_EVERY,
   FUEL_DRAIN_PER_TICK,
-  JET_TRIGGER_ROWS,
+  LATERAL_RAMP_TICKS,
+  LATERAL_SPEED,
   MAX_DISPLAYED_SCORE,
   MAX_RESERVE_JETS,
   MISSILE_HEIGHT,
@@ -15,7 +16,6 @@ import {
   PLAYER_HEIGHT,
   PLAYER_NOSE_ROW,
   PLAYER_SHAPE,
-  PLAYER_SPEED_X,
   PLAYER_WIDTH,
   PLAYFIELD_HEIGHT,
   POINTS,
@@ -35,7 +35,7 @@ import type {
   Rect,
   SpeedLevel,
 } from './types.ts';
-import { noseRowOf } from './view.ts';
+import { jetColumn, noseRowOf } from './view.ts';
 import { World } from './world.ts';
 import type { Spawn } from './spawns.ts';
 
@@ -62,6 +62,8 @@ export function createGame(world: World = new World()): GameState {
     speedLevel: 'normal',
     scroll: 0,
     playerX: 0,
+    heading: 0,
+    headingTicks: 0,
     missile: null,
     enemies: [],
     depots: [],
@@ -125,7 +127,9 @@ function startRunAt(state: GameState, row: number): void {
   const water = state.world.rowAt(row);
   state.phase = 'playing';
   state.scroll = row;
-  state.playerX = Math.round((water.left + water.right - PLAYER_WIDTH) / 2);
+  state.playerX = Math.floor((water.left + water.right - PLAYER_WIDTH) / 2);
+  state.heading = 0;
+  state.headingTicks = 0;
   state.fuel = 1;
   state.refueling = false;
   state.speedLevel = 'normal';
@@ -150,13 +154,17 @@ function speedLevelFor(input: Input): SpeedLevel {
 }
 
 function steer(state: GameState, input: Input): void {
-  const direction = Number(input.right) - Number(input.left);
-  const x = state.playerX + direction * PLAYER_SPEED_X;
-  state.playerX = Math.min(SCREEN_WIDTH - PLAYER_WIDTH, Math.max(0, x));
+  const direction = Math.sign(Number(input.right) - Number(input.left)) as -1 | 0 | 1;
+  state.headingTicks = direction !== 0 && direction === state.heading ? state.headingTicks + 1 : 1;
+  state.heading = direction;
+  if (direction === 0) return;
+
+  const speed = state.headingTicks <= LATERAL_RAMP_TICKS ? LATERAL_SPEED.start : LATERAL_SPEED.full;
+  state.playerX = Math.min(SCREEN_WIDTH - PLAYER_WIDTH, Math.max(0, state.playerX + direction * speed));
 }
 
 function poseOf(state: GameState): Pose {
-  return { noseRow: noseRowOf(state.scroll), x: state.playerX };
+  return { noseRow: noseRowOf(state.scroll), x: jetColumn(state.playerX) };
 }
 
 function findCrashCause(state: GameState): CrashCause | null {
@@ -172,7 +180,7 @@ function loseJet(state: GameState, cause: CrashCause, events: GameEvent[]): void
   state.deathTicksLeft = DEATH_TICKS;
   state.missile = null;
   state.refueling = false;
-  addExplosion(state, 'plane', state.playerX + PLAYER_WIDTH / 2, noseRowOf(state.scroll) - PLAYER_HEIGHT / 2);
+  addExplosion(state, 'plane', jetColumn(state.playerX) + PLAYER_WIDTH / 2, noseRowOf(state.scroll) - PLAYER_HEIGHT / 2);
   events.push({ type: 'jetLost', cause });
 }
 
@@ -184,7 +192,7 @@ function consumeFuel(state: GameState): void {
 }
 
 function fireMissile(state: GameState, events: GameEvent[]): void {
-  state.missile = { x: state.playerX + NOSE_COLUMN, y: noseRowOf(state.scroll) + 1 };
+  state.missile = { x: jetColumn(state.playerX) + NOSE_COLUMN, y: noseRowOf(state.scroll) + 1 };
   events.push({ type: 'missileFired' });
 }
 
@@ -327,8 +335,16 @@ function moveEnemies(state: GameState): void {
   }
 }
 
+/**
+ * A jet sets off so that, flying at normal speed, the player reaches its row just as it crosses the
+ * middle of the river. Slowing down or speeding up is how to dodge it.
+ */
+function jetTriggerRows(jet: Enemy): number {
+  return Math.round((SCREEN_WIDTH / 2 + jet.width / 2) / Math.abs(jet.vx));
+}
+
 function flyJet(jet: Enemy, noseRow: number): void {
-  if (!jet.active && jet.y - noseRow <= JET_TRIGGER_ROWS) jet.active = true;
+  if (!jet.active && jet.y - noseRow <= jetTriggerRows(jet)) jet.active = true;
   if (jet.active) jet.x += jet.vx;
 }
 

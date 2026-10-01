@@ -73,7 +73,11 @@ export interface GameState {
   speedLevel: SpeedLevel;
   /** World row of the jet's nose. It grows as the jet flies upstream. */
   scroll: number;
+  /** Left edge of the jet; fractional while it moves at half speed. See `jetColumn`. */
   playerX: number;
+  /** Direction the jet is steering in, and for how many ticks it has been held. */
+  heading: -1 | 0 | 1;
+  headingTicks: number;
   missile: Missile | null;
   enemies: Enemy[];
   depots: FuelDepot[];

@@ -14,3 +14,8 @@ export function screenRowOf(scroll: number, worldRow: number): number {
 export function worldRowAt(scroll: number, screenRow: number): number {
   return noseRowOf(scroll) + PLAYER_NOSE_ROW - screenRow;
 }
+
+/** Column the jet occupies: it moves in fractions of a column, but is drawn and tested on whole ones. */
+export function jetColumn(playerX: number): number {
+  return Math.floor(playerX);
+}
