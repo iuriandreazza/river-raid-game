@@ -12,13 +12,18 @@ import { LeaderboardError, type LeaderboardPort, type SubmitScoreInput } from '.
 
 type Fetch = typeof fetch;
 
+/** Long enough for a slow connection, short enough that a stuck server does not leave the screens waiting forever. */
+const REQUEST_TIMEOUT_MS = 15_000;
+
 export class HttpLeaderboard implements LeaderboardPort {
   private readonly baseUrl: string;
   private readonly fetchImpl: Fetch;
+  private readonly timeoutMs: number;
 
-  constructor(baseUrl = '/api', fetchImpl: Fetch = globalThis.fetch.bind(globalThis)) {
+  constructor(baseUrl = '/api', fetchImpl: Fetch = globalThis.fetch.bind(globalThis), timeoutMs = REQUEST_TIMEOUT_MS) {
     this.baseUrl = baseUrl;
     this.fetchImpl = fetchImpl;
+    this.timeoutMs = timeoutMs;
   }
 
   async startSession(): Promise<string> {
@@ -50,6 +55,7 @@ export class HttpLeaderboard implements LeaderboardPort {
         method: options.method ?? 'GET',
         headers: options.body === undefined ? undefined : { 'Content-Type': 'application/json' },
         body: options.body === undefined ? undefined : JSON.stringify(options.body),
+        signal: AbortSignal.timeout(this.timeoutMs),
       });
     } catch {
       throw new LeaderboardError('network', 'The leaderboard cannot be reached.');

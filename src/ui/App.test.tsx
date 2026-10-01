@@ -197,6 +197,25 @@ describe('game over', () => {
     expect(await screen.findByText(/you placed #1/i)).toBeTruthy();
   });
 
+  it.each([
+    ['unknown_session', /expired/i],
+    ['invalid_replay', /could not verify/i],
+    ['score_mismatch', /could not verify/i],
+    ['outdated_client', /reload the page/i],
+    ['initials_not_allowed', /not allowed/i],
+    ['rate_limited', /too many attempts/i],
+    ['payload_too_large', /too long/i],
+  ] as const)('explains the answer %s to the player', async (code, message) => {
+    const setup = startGame();
+    setup.leaderboard.submitScore.mockRejectedValueOnce(new LeaderboardError(code, 'server wording'));
+    await finishGame(setup, 900);
+
+    fireEvent.change(await screen.findByLabelText(/enter your initials/i), { target: { value: 'ABC' } });
+    fireEvent.click(screen.getByRole('button', { name: /save score/i }));
+
+    expect((await screen.findByRole('alert')).textContent).toMatch(message);
+  });
+
   it('does not ask for initials when the leaderboard was unreachable at the start', async () => {
     const setup = createFakeServices();
     setup.leaderboard.startSession.mockRejectedValueOnce(new LeaderboardError('network', 'down'));

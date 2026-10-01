@@ -68,6 +68,18 @@ describe('HttpLeaderboard', () => {
     await expect(leaderboard.topScores()).rejects.toEqual(new LeaderboardError('network', 'The leaderboard cannot be reached.'));
   });
 
+  it('gives up on a server that never answers', async () => {
+    const fetchImpl = vi.fn<typeof fetch>(
+      (_url, init) =>
+        new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener('abort', () => reject(init.signal!.reason));
+        }),
+    );
+    const leaderboard = new HttpLeaderboard('/api', fetchImpl, 20);
+
+    await expect(leaderboard.topScores()).rejects.toMatchObject({ name: 'LeaderboardError', code: 'network' });
+  });
+
   it('copes with answers that are not the API error format', async () => {
     const { leaderboard } = leaderboardAnswering(new Response('<html>Bad gateway</html>', { status: 502 }));
     await expect(leaderboard.topScores()).rejects.toMatchObject({ code: 'unexpected' });

@@ -30,8 +30,20 @@ function describeSaveError(error: unknown): string {
       return 'The leaderboard cannot be reached. Check your connection and try again.';
     case 'session_already_used':
       return 'This score was already saved.';
+    case 'unknown_session':
+      return 'This run has expired. Play again to save a score.';
     case 'implausible_score':
-      return 'The leaderboard could not accept this score.';
+    case 'invalid_replay':
+    case 'score_mismatch':
+      return 'The leaderboard could not verify this run, so it was not saved.';
+    case 'outdated_client':
+      return 'The game was updated while you were playing. Reload the page to play the new version.';
+    case 'initials_not_allowed':
+      return 'Those initials are not allowed. Pick others.';
+    case 'rate_limited':
+      return 'Too many attempts. Wait a moment and try again.';
+    case 'payload_too_large':
+      return 'This run is too long to be saved.';
     default:
       return 'The score could not be saved.';
   }
