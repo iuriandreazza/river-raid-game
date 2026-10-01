@@ -55,6 +55,8 @@ jobs:
           context: .
           load: true
           tags: river-raid:ci
+          build-args: |
+            REVISION=${{ github.sha }}
           cache-from: type=gha
       # What the platform will do with the image: run it with a fresh volume on /data and talk to it. The hardening
       # flags are the ones the README recommends, so that they are known to work.
@@ -64,6 +66,8 @@ jobs:
             --read-only --tmpfs /tmp --cap-drop ALL --security-opt no-new-privileges river-raid:ci
           curl --fail --silent --show-error --retry 30 --retry-delay 1 --retry-connrefused --retry-all-errors \
             http://localhost:8080/api/health
+          # The commit given to the build comes out of the health check: it is how a deploy proves what runs.
+          test "$(curl --fail --silent http://localhost:8080/api/health | jq -r .revision)" = "$GITHUB_SHA"
           curl --fail --silent --show-error http://localhost:8080/ > /dev/null
           # Starting a session writes to the database on the volume.
           curl --fail --silent --show-error --request POST http://localhost:8080/api/sessions
@@ -108,6 +112,9 @@ jobs:
           # Attestations would add extra entries to the manifest list; the platform wants one manifest per image.
           provenance: false
           sbom: false
+          # The health check reports it, which is how the deploy job knows that the new version is the one answering.
+          build-args: |
+            REVISION=${{ github.sha }}
           tags: |
             ${{ env.IMAGE }}:${{ steps.tag.outputs.tag }}
             ${{ env.IMAGE }}:latest
@@ -163,12 +170,30 @@ jobs:
         run: |
           sed -i "s|river-raid-game:latest|river-raid-game:${TAG}|" zs.yaml
           grep -q "river-raid-game:${TAG}" zs.yaml
+      # zs exits 0 even when a deployment is marked failed, and today the platform adds failed records after a redeploy
+      # that did swap the container (see docs/deploy.md). So what zs prints is shown, and the verdict is the next step's.
       - name: Deploy
-        run: zs deploy --profile ci
-      - name: Check that the app answers
-        if: vars.APP_URL != ''
+        run: zs deploy --profile ci 2>&1 | tee deploy.txt
+      - name: Check that the new version is the one answering
         env:
           APP_URL: ${{ vars.APP_URL }}
         run: |
-          curl --fail --silent --show-error --retry 12 --retry-delay 10 --retry-all-errors \
-            "${APP_URL}/api/health"
+          if [ -z "$APP_URL" ]; then
+            echo "::error::Set the repository variable APP_URL to the address of the app, so that a deploy can be checked."
+            exit 1
+          fi
+          for attempt in $(seq 1 24); do
+            revision="$(curl --silent --fail "${APP_URL}/api/health" | jq -r '.revision // ""' || true)"
+            if [ "$revision" = "$GITHUB_SHA" ]; then
+              echo "The app runs ${GITHUB_SHA}."
+              if grep -q "Deploy failed" deploy.txt; then
+                echo "::warning::zs reported a failed deployment, but the new version is serving (known platform quirk, see docs/deploy.md)."
+              fi
+              exit 0
+            fi
+            echo "Attempt ${attempt}: the app reports revision '${revision}', waiting for ${GITHUB_SHA}."
+            sleep 10
+          done
+          echo "::error::The app did not come up on ${GITHUB_SHA}. This is what zs deploy printed:"
+          cat deploy.txt
+          exit 1
