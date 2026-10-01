@@ -82,7 +82,8 @@ export function TitleScreen({ services, onStart }: TitleScreenProps) {
         <p className="muted">
           A fan-made tribute to the 1982 Atari 2600 game by Carol Shaw. Not affiliated with or endorsed by Activision.
         </p>
-        <ul className="credits">
+        {/* Safari drops the list semantics of a list without bullets unless the role says so. */}
+        <ul className="credits" role="list">
           {CREDITS.map(({ name, href, icon }) => (
             <li key={href}>
               <a href={href} target="_blank" rel="noopener">
