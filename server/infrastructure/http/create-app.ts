@@ -20,13 +20,20 @@ export interface AppOptions {
 const FINGERPRINTED_PREFIX = '/assets/';
 const ONE_YEAR_SECONDS = 365 * 24 * 60 * 60;
 
-/** The built client runs its own script and style files and only talks to this server. */
+/**
+ * The built client runs its own script and style files and talks to this server, apart from Google Analytics: its
+ * script, and the places it reports to (the hosts Google lists for a tag without advertising features). No inline
+ * script is allowed, which is why the client starts Analytics from its own module.
+ */
+const GOOGLE_TAG_MANAGER = 'https://www.googletagmanager.com';
+const GOOGLE_ANALYTICS = 'https://*.google-analytics.com';
+
 const CONTENT_SECURITY_POLICY = {
   defaultSrc: ["'none'"],
-  scriptSrc: ["'self'"],
+  scriptSrc: ["'self'", GOOGLE_TAG_MANAGER],
   styleSrc: ["'self'"],
-  imgSrc: ["'self'"],
-  connectSrc: ["'self'"],
+  imgSrc: ["'self'", GOOGLE_TAG_MANAGER, GOOGLE_ANALYTICS],
+  connectSrc: ["'self'", GOOGLE_TAG_MANAGER, GOOGLE_ANALYTICS, 'https://*.google.com'],
   baseUri: ["'none'"],
   formAction: ["'self'"],
   frameAncestors: ["'none'"],

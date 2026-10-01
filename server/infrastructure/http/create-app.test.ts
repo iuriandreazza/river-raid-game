@@ -556,6 +556,43 @@ describe('security headers', () => {
     },
   );
 
+  describe('content security policy', () => {
+    async function policyOf(path: string): Promise<Map<string, string[]>> {
+      const { app } = createWorld({ staticDir: siteDir });
+      const header = (await app.request(path)).headers.get('content-security-policy') ?? '';
+      return new Map(
+        header.split(';').map((directive) => {
+          const [name = '', ...sources] = directive.trim().split(/\s+/);
+          return [name, sources];
+        }),
+      );
+    }
+
+    it.each(['/', '/api/health', '/missing.css'])('lets the page load and report to Google Analytics, and no other foreign host (%s)', async (path) => {
+      const policy = await policyOf(path);
+
+      expect(policy.get('script-src')).toEqual(["'self'", 'https://www.googletagmanager.com']);
+      expect(policy.get('connect-src')).toEqual([
+        "'self'",
+        'https://www.googletagmanager.com',
+        'https://*.google-analytics.com',
+        'https://*.google.com',
+      ]);
+      expect(policy.get('img-src')).toEqual(["'self'", 'https://www.googletagmanager.com', 'https://*.google-analytics.com']);
+      expect(policy.get('default-src')).toEqual(["'none'"]);
+      expect(policy.get('style-src')).toEqual(["'self'"]);
+    });
+
+    it('never allows inline or evaluated script', async () => {
+      const policy = await policyOf('/');
+
+      for (const [directive, sources] of policy) {
+        expect(sources, directive).not.toContain("'unsafe-inline'");
+        expect(sources, directive).not.toContain("'unsafe-eval'");
+      }
+    });
+  });
+
   it.each(['/', '/api/health', '/missing.css', '/nope%0A'])('make the browser stay on HTTPS for a year (%s)', async (path) => {
     const { app } = createWorld({ staticDir: siteDir });
 
