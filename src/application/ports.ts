@@ -59,12 +59,24 @@ export class LeaderboardError extends Error {
   }
 }
 
+/** Whether the visitor lets their visit be counted. */
+export type AnalyticsConsent = 'granted' | 'denied';
+
 /** Small settings that survive a page reload. */
 export interface Preferences {
   loadInitials(): string;
   saveInitials(initials: string): void;
   loadMuted(): boolean;
   saveMuted(muted: boolean): void;
+  /** `null` until the visitor has answered. */
+  loadAnalyticsConsent(): AnalyticsConsent | null;
+  saveAnalyticsConsent(consent: AnalyticsConsent): void;
+}
+
+/** Counts visits. It is started only once the visitor agrees, and stopped if they take it back. */
+export interface Analytics {
+  start(): void;
+  stop(): void;
 }
 
 /** A game that is running on a canvas, as seen by the UI. */
