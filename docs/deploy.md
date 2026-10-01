@@ -28,10 +28,11 @@ push to main ─▶ GitHub Actions ─▶ verify ─▶ image (amd64 + arm64) �
 
 - [`zs.yaml`](../zs.yaml) is the manifest: one service, one exposed port (8080), one named volume. The deploy job replaces `:latest` in it with the tag of the commit.
 - [`zs.toml`](../zs.toml) pins the `zs` profile of the project to `iuripersonal`, so a deploy from this folder never runs as another account of the same machine.
-- [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) has three jobs:
+- [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) has four jobs:
   1. **verify**, on every pull request and push: lint, tests, build (which type-checks) and `pnpm audit` for high and critical advisories;
-  2. **image**, on a push to `main`: builds the image for both architectures (the community nodes are a mix of amd64 and arm64) and publishes it as `sha-<commit>` and `latest`;
-  3. **deploy**, on a push to `main`, only when the repository variable `DEPLOY_ENABLED` is `true`: installs the `zs` release recorded in the workflow after checking its SHA-256, logs in with the API key, points the manifest at the new image, runs `zs deploy` and checks `/api/health`.
+  2. **container**, on every pull request and push: builds the image and runs it as the platform will, with a fresh volume on `/data`: the health check answers, the page is served, starting a session writes to the database, the moderation command runs inside the image and the process is not root;
+  3. **image**, on a push to `main`, after the two above: builds the image for both architectures (the community nodes are a mix of amd64 and arm64) and publishes it as `sha-<commit>` and `latest`;
+  4. **deploy**, on a push to `main`, only when the repository variable `DEPLOY_ENABLED` is `true`: installs the `zs` release recorded in the workflow after checking its SHA-256, logs in with the API key, points the manifest at the new image, runs `zs deploy` and checks `/api/health`.
 - Actions are pinned by commit, the workflow asks for read access only (the image job also writes packages), and pull requests never see a secret.
 
 ## One-time setup

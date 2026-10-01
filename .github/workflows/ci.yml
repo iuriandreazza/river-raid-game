@@ -41,9 +41,39 @@ jobs:
       - run: pnpm build
       - run: pnpm audit --audit-level high
 
+  container:
+    name: Build the image and run it
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          load: true
+          tags: river-raid:ci
+          cache-from: type=gha
+      # What the platform will do with the image: run it with a fresh volume on /data and talk to it.
+      - name: Run the image with a fresh volume and use it
+        run: |
+          docker run --detach --name app --publish 8080:8080 --volume river-raid-data:/data river-raid:ci
+          curl --fail --silent --show-error --retry 30 --retry-delay 1 --retry-connrefused http://localhost:8080/api/health
+          curl --fail --silent --show-error http://localhost:8080/ > /dev/null
+          # Starting a session writes to the database on the volume.
+          curl --fail --silent --show-error --request POST http://localhost:8080/api/sessions
+          docker exec app node dist-server/server/cli.js list
+          docker exec app ls -l /data
+          test "$(docker exec app id -u)" != 0
+      - name: Show the log of the container
+        if: always()
+        run: docker logs app || true
+
   image:
     name: Build and publish the image
-    needs: verify
+    needs: [verify, container]
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
