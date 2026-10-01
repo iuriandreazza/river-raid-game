@@ -11,7 +11,7 @@ import {
   verifyReplay,
 } from './replay.ts';
 import { GOLDEN_RUNS, GOLDEN_RUNS_ENGINE_VERSION } from './testing/golden-runs.ts';
-import { cautiousPilot, recordRun } from './testing/pilot.ts';
+import { cautiousPilot, noisyPolicy, recordRun } from './testing/pilot.ts';
 import { NO_INPUT, type Input } from './types.ts';
 
 const input = (overrides: Partial<Input>): Input => ({ ...NO_INPUT, ...overrides });
@@ -110,6 +110,14 @@ describe('verifyReplay', () => {
     expect(verifyReplay(extended)).toEqual({ ok: false, reason: 'continued_after_game_over' });
   });
 
+  it('reproduces games played with random controls, which find the odd corners of the rules', () => {
+    for (let seed = 1; seed <= 100; seed++) {
+      const random = recordRun(noisyPolicy(seed));
+      expect(replayProblem(random.replay), `seed ${seed}`).toBeNull();
+      expect(verifyReplay(random.replay), `seed ${seed}`).toEqual({ ok: true, score: random.score, ticks: random.ticks });
+    }
+  });
+
   it('does not reproduce the score when the controls are different', () => {
     const handsOff = run.replay.map((value, index) => (index % 2 === 0 ? 0 : value));
     const verdict = verifyReplay(handsOff);
@@ -120,6 +128,10 @@ describe('verifyReplay', () => {
 describe('golden runs', () => {
   it('were recorded with the current engine version', () => {
     expect(GOLDEN_RUNS_ENGINE_VERSION, 'ENGINE_VERSION changed: run `pnpm record-golden-runs`').toBe(ENGINE_VERSION);
+  });
+
+  it.each(GOLDEN_RUNS)('are recordings the API accepts: "$name"', ({ replay }) => {
+    expect(replayProblem(replay)).toBeNull();
   });
 
   it.each(GOLDEN_RUNS)('still play back as the run "$name"', ({ replay, score, ticks }) => {
