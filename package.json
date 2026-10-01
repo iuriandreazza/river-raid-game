@@ -16,6 +16,7 @@
     "start": "node dist-server/server/main.js",
     "typecheck": "tsc -b",
     "lint": "eslint .",
+    "record-golden-runs": "node scripts/record-golden-runs.ts",
     "test": "vitest run",
     "test:watch": "vitest"
   },

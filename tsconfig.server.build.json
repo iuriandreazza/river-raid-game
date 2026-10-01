@@ -9,5 +9,5 @@
     "tsBuildInfoFile": null
   },
   "include": ["server", "shared"],
-  "exclude": ["**/*.test.ts", "server/testing/**"]
+  "exclude": ["**/*.test.ts", "server/testing/**", "shared/game/testing/**"]
 }
