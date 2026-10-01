@@ -35,7 +35,7 @@ How the global leaderboard is protected from being forged, flooded or defaced, c
 | The host and the database file | anyone who can send a request |
 | The supply chain | a malicious or compromised dependency |
 
-No account, password or personal data exists on the server: the only stored data is three characters, a score, a timestamp and the recording of the run. Client addresses are not stored; they are logged only when `LOG_CLIENT_ADDRESS=true`. The one exception is outside the server: the page loads Google Analytics, which sets its own cookies (`_ga`, `_ga_*`) and reports page views to Google (see the residual risks).
+No account, password or personal data exists on the server: the only stored data is three characters, a score, a timestamp and the recording of the run. Client addresses are not stored; they are logged only when `LOG_CLIENT_ADDRESS=true`. The one exception is outside the server: the page loads Google Analytics, which sets its own cookies (`_ga`, `_ga_*`) and reports page views and basic device and browser data to Google. It starts when the visitor accepts the banner, or when ten seconds pass without an answer ([ADR 0005](adr/0005-analytics-consent-by-countdown.md), and the residual risks).
 
 ## Abuse cases and controls
 
@@ -49,7 +49,7 @@ No account, password or personal data exists on the server: the only stored data
 | Flood the board, the sessions or the disk | Rate limits per client network, per route; tables capped (10,000 scores, 50,000 sessions, the oldest unused sessions go first); body limits per route; slow requests dropped. | `rate-limit.ts`, `storage-limits.ts`, `request-guards.ts`, `server-limits.ts` | `rate-limit.test.ts`, `api-hardening.test.ts`, `sqlite-leaderboard-store.test.ts` |
 | Cross-site writes | Writes need `Content-Type: application/json`, which a cross-site form cannot send and which needs a CORS preflight that is never granted. | `require-json-body.ts` | `require-json-body.test.ts` |
 | Offensive initials | Exactly three characters, `A–Z` or `0–9`, checked by the server; a short blocklist that reads digits as the letters they resemble; the moderation command for the rest. | `shared/initials.ts`, `shared/blocked-initials.ts`, `moderation-cli.ts` | `initials.test.ts`, `blocked-initials.test.ts`, `moderation-cli.test.ts` |
-| Script or markup on the page | React renders everything as text and there is no `dangerouslySetInnerHTML`; the stored fields are three characters from a closed alphabet; the CSP allows no inline script and no script but the game's own and Google's `gtag.js`. | `src/ui/*`, `create-app.ts` | `App.test.tsx`, `create-app.test.ts` |
+| Script or markup on the page | React renders everything as text and there is no `dangerouslySetInnerHTML`; the stored fields are three characters from a closed alphabet; the CSP allows no inline script and no script but the game's own and whatever `www.googletagmanager.com` serves (any path). | `src/ui/*`, `create-app.ts` | `App.test.tsx`, `create-app.test.ts` |
 | SQL injection | Prepared statements only; no SQL is built from input. | `sqlite-leaderboard-store.ts` | `sqlite-leaderboard-store.test.ts` |
 | Read files outside the site | `serveStatic` is rooted in `dist/`; a path with a control character is rewritten before routing, so it cannot slip past the middleware. | `create-app.ts` | `create-app.test.ts` |
 | Poison a cache or a proxy | API answers are `no-store`; the page is `no-cache`; `immutable` only for a fingerprinted file that was really served from `/assets/`. | `create-app.ts`, `api-routes.ts` | `create-app.test.ts` |
@@ -64,7 +64,7 @@ No account, password or personal data exists on the server: the only stored data
 | --- | --- | --- |
 | A01 Broken Access Control | Met | There is no privileged function over HTTP. The only capability is a session id, unguessable and good for one score. Responses carry no internal ids. Moderation needs shell access to the database. |
 | A02 Security Misconfiguration | Met | CSP, HSTS (one year), `nosniff`, `Referrer-Policy: no-referrer`, a restrictive `Permissions-Policy`, COOP/CORP on every response; the CSP opens only the hosts Google Analytics needs and never `'unsafe-inline'`; no debug mode, directory listing or version header; container runs as `node` with a health check. |
-| A03 Software Supply Chain Failures | Met | See the last row of the table above. `pnpm audit` is clean. |
+| A03 Software Supply Chain Failures | Partially met | Met for the npm dependencies: see the last row of the table above, and `pnpm audit` is clean. `gtag.js` is a third-party script fetched on every visit, with no pinned version and no integrity check: see the residual risks. |
 | A04 Cryptographic Failures | Met | Nothing secret is stored or sent. TLS is the host's job and the app sends HSTS. Session ids and SHA-256 use the platform's primitives. |
 | A05 Injection | Met | Prepared statements, a closed alphabet for stored text, no `eval`, no shell, structured JSON logs. |
 | A06 Insecure Design | Met | The abuse cases above drove the design: the server does not trust the score, it replays the game; the cost of that is bounded by the session age rule; rules are versioned. |
@@ -121,7 +121,7 @@ Levels 1 and 2 where they apply to a public, anonymous service, plus a few level
 | 13.4.2, 13.4.3, 13.4.4, 13.4.5 | L2 | No debug mode, listings, `TRACE`, stray endpoints | Met | One public non-API endpoint: `/api/health`. |
 | 13.4.6, 13.4.7 | L3 | No version header, only safe file types | Met | Checked on the live server. The health check reports the commit of the app (a public repository) and no component versions. |
 | 14.2.1 | L1 | No sensitive data in URLs | Met | Only `limit`. |
-| 14.3.3 | L2 | Browser storage | Met | `localStorage` keeps the initials and the mute setting. |
+| 14.3.3 | L2 | Browser storage | Met | `localStorage` keeps the initials, the mute setting and the answer to the analytics banner. |
 | 15.1.1, 15.2.1 | L1 | Remediation timeframes for components | Met | Dependabot weekly, `SECURITY.md`. |
 | 15.1.3, 15.2.2 | L2 | Resource-intensive functionality is documented and defended | Met | ADR 0003, the age rule, the rate limit. |
 | 15.2.3 | L2 | No test code in production | Met | The build excludes tests and `testing/`; the image installs production dependencies only. |
@@ -135,6 +135,7 @@ Levels 1 and 2 where they apply to a public, anonymous service, plus a few level
 | 16.2.1 | L2 | Who, what, where and when in every entry | Partially met | The caller is left out on purpose unless `LOG_CLIENT_ADDRESS=true`. |
 | 13.1.2 | L3 | Connection limits | Not done | Node defaults plus the rate limit. |
 | 3.4.7 | L3 | CSP violation reporting | Not done | |
+| 3.6.1 | L3 | External client-side assets are static, versioned and checked with SRI, or the risk is documented | Not done | `gtag.js` is neither static nor versioned; the justification is ADR 0005 and the residual risks. |
 | 15.1.2 | L2 | A software bill of materials | Partially met | `pnpm-lock.yaml` is the inventory; no SBOM is generated. |
 
 ## What the reviews found
@@ -163,7 +164,8 @@ Levels 1 and 2 where they apply to a public, anonymous service, plus a few level
 - **The blocklist is short** and aimed at English and Portuguese. Anything craftier is for the moderation command.
 - **The game loop is outside React,** so an exception in it is not caught by the error boundary. The engine is fuzzed (random controls recorded and verified) to make that unlikely.
 - **The engine is assumed deterministic across browsers.** It uses only arithmetic that ECMAScript defines exactly; the golden runs and the river digest run in Node, so a divergence in a browser would show up as refused honest runs, never as accepted forged ones.
-- **Google Analytics is a third party on the page.** `gtag.js` runs with the page's privileges, so Google (or whoever compromises that script) could read the page and the recording of a run before it is sent. The CSP limits where it can send data, not what it can do. It also sets cookies and sends the visitor's address and page views to Google, which the earlier "no cookies" stance did not have; no consent banner exists yet, and whether one is required (LGPD, GDPR) is for the owner to decide.
+- **Google Analytics is a third party on the page.** `gtag.js` runs with the page's privileges, so Google (or whoever compromises that script) could read the page and the recording of a run before it is sent. The CSP narrows it to Google's hosts and does not limit what it can do: `script-src` allows every path of `www.googletagmanager.com`, and `connect-src` allows `*.google.com` and `*.google-analytics.com`, which include endpoints that others can own (a web app on `script.google.com`, the collector of someone else's property). The Analytics property must keep Google signals and the advertising links off, or the CSP blocks the extra hosts they need.
+- **Analytics starts without a click.** It sets cookies and sends the visitor's address and device data to Google. A banner asks first, but a visitor who does not answer within ten seconds is counted as having accepted. That is not valid consent under the GDPR (a pre-ticked choice or inactivity is not consent) nor under the LGPD (art. 5, XII: a free, informed and unambiguous manifestation), and the owner took the decision knowing it ([ADR 0005](adr/0005-analytics-consent-by-countdown.md)). `CONSENT_WITHOUT_ANSWER` in `src/ui/useAnalyticsConsent.ts` is the one constant that makes it opt-in.
 - **No third-party penetration test.**
 
 ## Operating the leaderboard
