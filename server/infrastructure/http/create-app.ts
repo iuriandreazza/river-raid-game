@@ -12,6 +12,8 @@ export interface AppOptions {
   /** Directory with the built web client. When set, its files are served and `index.html` backs every other GET. */
   staticDir?: string;
   security?: SecuritySettings;
+  /** The commit this build comes from, reported by the health check. */
+  revision?: string;
 }
 
 /** Vite fingerprints everything under /assets, so those files never change under the same URL. */
@@ -73,7 +75,7 @@ function routablePath(request: Request): string {
   return getPath(request).replace(/\p{Cc}/gu, '�');
 }
 
-export function createApp({ service, staticDir, security }: AppOptions): Hono {
+export function createApp({ service, staticDir, security, revision }: AppOptions): Hono {
   const app = new Hono({ getPath: routablePath });
   app.use(
     '*',
@@ -85,7 +87,7 @@ export function createApp({ service, staticDir, security }: AppOptions): Hono {
       permissionsPolicy: DENIED_BROWSER_FEATURES,
     }),
   );
-  app.route('/api', createApiRoutes(service, resolveSecuritySettings(security)));
+  app.route('/api', createApiRoutes(service, resolveSecuritySettings(security), revision));
   if (staticDir !== undefined) {
     // Mounted after the API so that it never sees /api requests, which the API answers itself.
     app.route('/', createSite(staticDir));

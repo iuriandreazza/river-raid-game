@@ -28,11 +28,12 @@ const app = createApp({
   service,
   staticDir: config.staticDir,
   security: { trustProxy: config.trustProxy, logClientAddress: config.logClientAddress },
+  revision: config.revision,
 });
 
 const server = serve({ fetch: app.fetch, port: config.port, serverOptions: HTTP_SERVER_LIMITS }, ({ port }) => {
   console.log(
-    `River Raid API listening on http://localhost:${port} (database: ${config.databasePath}, static files: ${config.staticDir ?? 'none'}, trusted proxies: ${config.trustProxy})`,
+    `River Raid API listening on http://localhost:${port} (database: ${config.databasePath}, static files: ${config.staticDir ?? 'none'}, trusted proxies: ${config.trustProxy}, revision: ${config.revision ?? 'unknown'})`,
   );
 });
 

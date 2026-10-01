@@ -11,6 +11,12 @@ export interface LeaderboardEntry {
   achievedAt: string;
 }
 
+export interface HealthResponse {
+  status: 'ok';
+  /** The commit the server was built from, when the build says so. It lets a deploy prove which version answers. */
+  revision?: string;
+}
+
 export interface CreateSessionResponse {
   sessionId: string;
 }
