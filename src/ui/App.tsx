@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import type { RunResult } from '../application/ports.ts';
 import { GameOverScreen } from './GameOverScreen.tsx';
 import { GameScreen } from './GameScreen.tsx';
 import { TitleScreen } from './TitleScreen.tsx';
@@ -7,7 +8,7 @@ import type { AppServices } from './services.ts';
 type Screen =
   | { name: 'title' }
   | { name: 'playing'; session: Promise<string | null> }
-  | { name: 'gameOver'; score: number; session: Promise<string | null> };
+  | { name: 'gameOver'; result: RunResult; session: Promise<string | null> };
 
 export function App({ services }: { services: AppServices }) {
   const [screen, setScreen] = useState<Screen>({ name: 'title' });
@@ -23,14 +24,14 @@ export function App({ services }: { services: AppServices }) {
       return (
         <GameScreen
           services={services}
-          onGameOver={(score) => setScreen({ name: 'gameOver', score, session: screen.session })}
+          onGameOver={(result) => setScreen({ name: 'gameOver', result, session: screen.session })}
         />
       );
     case 'gameOver':
       return (
         <GameOverScreen
           services={services}
-          score={screen.score}
+          result={screen.result}
           session={screen.session}
           onPlayAgain={startRun}
           onExit={() => setScreen({ name: 'title' })}

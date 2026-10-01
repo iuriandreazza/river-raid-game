@@ -1,7 +1,11 @@
 import { vi } from 'vitest';
 import type { LeaderboardEntry } from '../../shared/leaderboard-contract.ts';
 import type { LeaderboardPort, Preferences, RunningGame } from '../application/ports.ts';
+import type { RunResult } from '../application/ports.ts';
 import type { AppServices } from './services.ts';
+
+/** A replay that is only good enough to be passed along: the fakes never look inside it. */
+export const STUB_REPLAY = [1, 1];
 
 export function entry(rank: number, initials: string, score: number): LeaderboardEntry {
   return { rank, initials, score, achievedAt: '2026-10-01T12:00:00.000Z' };
@@ -10,8 +14,8 @@ export function entry(rank: number, initials: string, score: number): Leaderboar
 export class FakeLeaderboard implements LeaderboardPort {
   entries: LeaderboardEntry[] = [];
   startSession = vi.fn<LeaderboardPort['startSession']>(async () => 'session-1');
-  submitScore = vi.fn<LeaderboardPort['submitScore']>(async ({ initials, score }) => {
-    const saved = entry(1, initials, score);
+  submitScore = vi.fn<LeaderboardPort['submitScore']>(async ({ initials, run }) => {
+    const saved = entry(1, initials, run.score);
     this.entries = [saved, ...this.entries];
     return saved;
   });
@@ -49,7 +53,7 @@ export function createFakeServices() {
         resume: vi.fn(),
         setMuted: vi.fn(),
         dispose: vi.fn(),
-        finish: (score) => onGameOver(score),
+        finish: (score) => onGameOver({ score, replay: STUB_REPLAY } satisfies RunResult),
       };
       games.push(game);
       return game;

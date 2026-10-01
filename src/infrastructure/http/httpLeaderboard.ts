@@ -7,6 +7,7 @@ import {
   type SubmitScoreResponse,
   type TopScoresResponse,
 } from '../../../shared/leaderboard-contract.ts';
+import { ENGINE_VERSION } from '../../../shared/game/replay.ts';
 import { LeaderboardError, type LeaderboardPort, type SubmitScoreInput } from '../../application/ports.ts';
 
 type Fetch = typeof fetch;
@@ -25,8 +26,14 @@ export class HttpLeaderboard implements LeaderboardPort {
     return sessionId;
   }
 
-  async submitScore(input: SubmitScoreInput): Promise<LeaderboardEntry> {
-    const body: SubmitScoreRequest = input;
+  async submitScore({ sessionId, initials, run }: SubmitScoreInput): Promise<LeaderboardEntry> {
+    const body: SubmitScoreRequest = {
+      sessionId,
+      initials,
+      score: run.score,
+      engineVersion: ENGINE_VERSION,
+      replay: [...run.replay],
+    };
     const { entry } = await this.request<SubmitScoreResponse>('/scores', { method: 'POST', body });
     return entry;
   }

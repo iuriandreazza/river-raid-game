@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import type { LeaderboardEntry } from '../../shared/leaderboard-contract.ts';
 import { INITIALS_LENGTH } from '../../shared/initials.ts';
-import { LeaderboardError } from '../application/ports.ts';
+import { LeaderboardError, type RunResult } from '../application/ports.ts';
 import { InitialsInput } from './InitialsInput.tsx';
 import { Leaderboard } from './Leaderboard.tsx';
 import { formatScore } from './LeaderboardTable.tsx';
@@ -10,7 +10,7 @@ import { useHotkeys } from './useHotkeys.ts';
 
 interface GameOverScreenProps {
   services: AppServices;
-  score: number;
+  result: RunResult;
   /** Resolves to the id the score must be saved with, or null when the leaderboard was unreachable. */
   session: Promise<string | null>;
   onPlayAgain: () => void;
@@ -52,7 +52,8 @@ function useSessionId(session: Promise<string | null>): string | null | undefine
   return resolved?.session === session ? resolved.id : undefined;
 }
 
-export function GameOverScreen({ services, score, session, onPlayAgain, onExit }: GameOverScreenProps) {
+export function GameOverScreen({ services, result, session, onPlayAgain, onExit }: GameOverScreenProps) {
+  const { score } = result;
   const sessionId = useSessionId(session);
   const [initials, setInitials] = useState(() => services.preferences.loadInitials());
   const [save, setSave] = useState<SaveState>({ status: 'idle' });
@@ -67,7 +68,7 @@ export function GameOverScreen({ services, score, session, onPlayAgain, onExit }
 
     setSave({ status: 'saving' });
     try {
-      const entry = await services.leaderboard.submitScore({ sessionId, initials, score });
+      const entry = await services.leaderboard.submitScore({ sessionId, initials, run: result });
       services.preferences.saveInitials(initials);
       setSave({ status: 'saved', entry });
     } catch (error) {

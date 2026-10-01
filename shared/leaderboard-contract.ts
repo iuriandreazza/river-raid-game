@@ -21,7 +21,12 @@ export interface CreateSessionResponse {
 export interface SubmitScoreRequest {
   sessionId: string;
   initials: string;
+  /** What the player saw at game over. The server plays the run again and only accepts the same number. */
   score: number;
+  /** Version of the game rules the run was played with (`ENGINE_VERSION`). */
+  engineVersion: number;
+  /** The controls held on every tick of the whole game: see `shared/game/replay.ts`. */
+  replay: number[];
 }
 
 export interface SubmitScoreResponse {
@@ -38,6 +43,9 @@ export type ApiErrorCode =
   | 'unknown_session'
   | 'session_already_used'
   | 'implausible_score'
+  | 'invalid_replay'
+  | 'score_mismatch'
+  | 'outdated_client'
   | 'internal_error';
 
 export interface ApiErrorResponse {

@@ -1,8 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createGame } from '../../shared/game/game.ts';
+import { replayTicks, verifyReplay } from '../../shared/game/replay.ts';
+import { noisyPolicy } from '../../shared/game/testing/pilot.ts';
 import { NO_INPUT, type GameEvent, type GameState, type Input } from '../../shared/game/types.ts';
 import { GameSession } from './gameSession.ts';
-import type { FrameScheduler, InputPort, RendererPort, SoundPort } from './ports.ts';
+import type { FrameScheduler, InputPort, RendererPort, RunResult, SoundPort } from './ports.ts';
 
 class FakeScheduler implements FrameScheduler {
   private readonly callbacks = new Map<number, (timestamp: number) => void>();
@@ -36,9 +38,9 @@ class FakeScheduler implements FrameScheduler {
   }
 }
 
-function setup(game: GameState = createGame(), held: Input = NO_INPUT) {
+function setup(game: GameState = createGame(), held: Input | ((state: GameState) => Input) = NO_INPUT) {
   const scheduler = new FakeScheduler();
-  const input: InputPort = { read: vi.fn(() => held), dispose: vi.fn() };
+  const input: InputPort = { read: vi.fn(() => (typeof held === 'function' ? held(game) : held)), dispose: vi.fn() };
   const renderer: RendererPort = { render: vi.fn() };
   const sound: SoundPort = {
     play: vi.fn(),
@@ -118,7 +120,19 @@ describe('GameSession', () => {
 
     scheduler.playFor(4, 60, 1000);
     expect(onGameOver).toHaveBeenCalledTimes(1);
-    expect(onGameOver).toHaveBeenCalledWith(12_340);
+    expect(onGameOver).toHaveBeenCalledWith({ score: 12_340, replay: [] });
+  });
+
+  it('hands over the controls of the whole game, so that playing them again gives the same game', () => {
+    const policy = noisyPolicy(1);
+    const { scheduler, onGameOver } = setup(createGame(), (state) => policy(state, state.tick));
+
+    scheduler.playFor(60, 60);
+
+    expect(onGameOver).toHaveBeenCalledTimes(1);
+    const { score, replay } = vi.mocked(onGameOver).mock.calls[0]![0] as RunResult;
+    expect(score).toBeGreaterThan(0);
+    expect(verifyReplay(replay)).toEqual({ ok: true, score, ticks: replayTicks(replay) });
   });
 
   it('passes the mute setting to the speakers', () => {

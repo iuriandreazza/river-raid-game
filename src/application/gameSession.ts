@@ -1,7 +1,8 @@
 import { TICKS_PER_SECOND } from '../../shared/game/constants.ts';
 import { advance, createGame } from '../../shared/game/game.ts';
+import { ReplayRecorder } from '../../shared/game/replay.ts';
 import type { GameState } from '../../shared/game/types.ts';
-import type { FrameScheduler, InputPort, RendererPort, RunningGame, SoundPort } from './ports.ts';
+import type { FrameScheduler, InputPort, RendererPort, RunResult, RunningGame, SoundPort } from './ports.ts';
 
 const TICK_MS = 1000 / TICKS_PER_SECOND;
 /** Absorbs floating point drift so 60 frames of 16.67 ms always make 60 ticks. */
@@ -16,7 +17,7 @@ export interface GameSessionOptions {
   renderer: RendererPort;
   sound: SoundPort;
   scheduler: FrameScheduler;
-  onGameOver: (finalScore: number) => void;
+  onGameOver: (result: RunResult) => void;
   game?: GameState;
 }
 
@@ -28,6 +29,7 @@ export interface GameSessionOptions {
 export class GameSession implements RunningGame {
   readonly state: GameState;
   private readonly options: GameSessionOptions;
+  private readonly recorder = new ReplayRecorder();
   private frameHandle: number | null = null;
   private lastTimestamp: number | null = null;
   private pendingMs = 0;
@@ -83,14 +85,18 @@ export class GameSession implements RunningGame {
   }
 
   private tick(): void {
-    const events = advance(this.state, this.options.input.read());
+    const input = this.options.input.read();
+    const wasOver = this.state.phase === 'gameOver';
+    const events = advance(this.state, input);
+    // The recording ends with the tick that lost the last jet: what follows is only the banner staying up.
+    if (!wasOver) this.recorder.record(input);
     for (const event of events) this.options.sound.play(event);
 
     if (this.state.phase !== 'gameOver') return;
     this.lingerTicks++;
     if (this.lingerTicks >= GAME_OVER_LINGER_TICKS) {
       this.finished = true;
-      this.options.onGameOver(this.state.score);
+      this.options.onGameOver({ score: this.state.score, replay: this.recorder.replay() });
     }
   }
 }

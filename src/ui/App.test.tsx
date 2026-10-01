@@ -4,7 +4,7 @@ import { StrictMode } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { LeaderboardError } from '../application/ports.ts';
 import { App } from './App.tsx';
-import { createFakeServices, entry } from './testSupport.ts';
+import { STUB_REPLAY, createFakeServices, entry } from './testSupport.ts';
 
 afterEach(cleanup);
 
@@ -145,7 +145,11 @@ describe('game over', () => {
     fireEvent.click(screen.getByRole('button', { name: /save score/i }));
 
     expect(await screen.findByText(/you placed #1/i)).toBeTruthy();
-    expect(setup.leaderboard.submitScore).toHaveBeenCalledWith({ sessionId: 'session-1', initials: 'AB1', score: 4_200 });
+    expect(setup.leaderboard.submitScore).toHaveBeenCalledWith({
+      sessionId: 'session-1',
+      initials: 'AB1',
+      run: { score: 4_200, replay: STUB_REPLAY },
+    });
     expect(setup.preferences.saveInitials).toHaveBeenCalledWith('AB1');
     expect(await screen.findByRole('table')).toBeTruthy();
     expect(screen.queryByRole('button', { name: /save score/i })).toBeNull();

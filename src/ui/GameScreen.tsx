@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState, type MouseEvent } from 'react';
-import type { RunningGame } from '../application/ports.ts';
+import type { RunResult, RunningGame } from '../application/ports.ts';
 import type { AppServices } from './services.ts';
 import { useHotkeys } from './useHotkeys.ts';
 
 interface GameScreenProps {
   services: AppServices;
-  onGameOver: (finalScore: number) => void;
+  onGameOver: (result: RunResult) => void;
 }
 
 export function GameScreen({ services, onGameOver }: GameScreenProps) {
@@ -22,7 +22,7 @@ export function GameScreen({ services, onGameOver }: GameScreenProps) {
   // The game is created and destroyed with the screen. Strict Mode mounts effects twice in development,
   // so the cleanup has to stop the loop and release the keyboard and the audio for good.
   useEffect(() => {
-    const game = services.startGame(canvasRef.current!, (score) => onGameOverRef.current(score));
+    const game = services.startGame(canvasRef.current!, (result) => onGameOverRef.current(result));
     gameRef.current = game;
     return () => {
       game.dispose();

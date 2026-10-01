@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { LeaderboardEntry } from '../../../shared/leaderboard-contract.ts';
+import { ENGINE_VERSION } from '../../../shared/game/replay.ts';
 import { LeaderboardError } from '../../application/ports.ts';
 import { HttpLeaderboard } from './httpLeaderboard.ts';
 
@@ -26,7 +27,7 @@ describe('HttpLeaderboard', () => {
 
   it('submits a score as JSON and returns the ranked entry', async () => {
     const { leaderboard, fetchImpl } = leaderboardAnswering(json({ entry }, 201));
-    const input = { sessionId: 'abc', initials: 'ABC', score: 4200 };
+    const input = { sessionId: 'abc', initials: 'ABC', run: { score: 4200, replay: [1, 3, 16, 2] } };
 
     await expect(leaderboard.submitScore(input)).resolves.toEqual(entry);
 
@@ -34,7 +35,13 @@ describe('HttpLeaderboard', () => {
     expect(url).toBe('/api/scores');
     expect(init?.method).toBe('POST');
     expect(init?.headers).toEqual({ 'Content-Type': 'application/json' });
-    expect(JSON.parse(init?.body as string)).toEqual(input);
+    expect(JSON.parse(init?.body as string)).toEqual({
+      sessionId: 'abc',
+      initials: 'ABC',
+      score: 4200,
+      engineVersion: ENGINE_VERSION,
+      replay: [1, 3, 16, 2],
+    });
   });
 
   it('asks for the top scores with a limit', async () => {
@@ -47,7 +54,9 @@ describe('HttpLeaderboard', () => {
     const { leaderboard } = leaderboardAnswering(
       json({ error: { code: 'session_already_used', message: 'Already submitted.' } }, 409),
     );
-    await expect(leaderboard.submitScore({ sessionId: 'abc', initials: 'ABC', score: 1 })).rejects.toMatchObject({
+    await expect(
+      leaderboard.submitScore({ sessionId: 'abc', initials: 'ABC', run: { score: 1, replay: [1, 1] } }),
+    ).rejects.toMatchObject({
       name: 'LeaderboardError',
       code: 'session_already_used',
       message: 'Already submitted.',

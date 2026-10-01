@@ -1,4 +1,5 @@
 import type { ApiErrorCode, LeaderboardEntry } from '../../shared/leaderboard-contract.ts';
+import type { Replay } from '../../shared/game/replay.ts';
 import type { GameEvent, GameState, Input } from '../../shared/game/types.ts';
 
 export interface InputPort {
@@ -27,10 +28,16 @@ export interface FrameScheduler {
   cancel(handle: number): void;
 }
 
+/** How a finished game ends: the score and the recording the leaderboard needs to believe it. */
+export interface RunResult {
+  score: number;
+  replay: Replay;
+}
+
 export interface SubmitScoreInput {
   sessionId: string;
   initials: string;
-  score: number;
+  run: RunResult;
 }
 
 export interface LeaderboardPort {
