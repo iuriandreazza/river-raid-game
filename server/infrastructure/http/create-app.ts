@@ -73,6 +73,8 @@ export function createApp({ service, staticDir, security }: AppOptions): Hono {
     secureHeaders({
       contentSecurityPolicy: CONTENT_SECURITY_POLICY,
       strictTransportSecurity: STRICT_TRANSPORT_SECURITY,
+      // Says what the CSP's frame-ancestors says, for the old browsers that only know this header.
+      xFrameOptions: 'DENY',
       permissionsPolicy: DENIED_BROWSER_FEATURES,
     }),
   );

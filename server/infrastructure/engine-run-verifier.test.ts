@@ -13,14 +13,14 @@ function effectiveOf(replay: Replay): Replay {
 }
 
 describe('EngineRunVerifier', () => {
-  let consoleError: MockInstance;
+  let warn: MockInstance;
 
   beforeEach(() => {
-    consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
   });
 
   afterEach(() => {
-    consoleError.mockRestore();
+    warn.mockRestore();
   });
 
   describe('with the real engine', () => {
@@ -99,11 +99,13 @@ describe('EngineRunVerifier', () => {
       expect(new EngineRunVerifier(exploding).verify([1, 1])).toEqual({ ok: false, reason: 'engine_error' });
     });
 
-    it('logs the cause at error level, as an honest run may have hit a bug', () => {
+    it('logs the cause as one JSON line, as an honest run may have hit a bug', () => {
       new EngineRunVerifier(exploding).verify([1, 1]);
 
-      expect(consoleError).toHaveBeenCalledTimes(1);
-      expect(consoleError).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({ message: 'engine bug' }));
+      expect(warn).toHaveBeenCalledTimes(1);
+      const line = (warn.mock.calls[0] as [string])[0];
+      expect(line).not.toContain('\n');
+      expect(JSON.parse(line)).toMatchObject({ event: 'engine_error', code: 'engine_error', error: expect.stringContaining('engine bug') });
     });
   });
 
@@ -113,6 +115,6 @@ describe('EngineRunVerifier', () => {
     const verdict = new EngineRunVerifier(() => says).verify([1, 1, 2, 2]);
 
     expect(verdict).toEqual({ ok: true, score: 7, ticks: 3, effective: [1, 3] });
-    expect(consoleError).not.toHaveBeenCalled();
+    expect(warn).not.toHaveBeenCalled();
   });
 });

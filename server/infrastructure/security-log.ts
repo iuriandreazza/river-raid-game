@@ -1,6 +1,11 @@
 import { createHash } from 'node:crypto';
 
-export type SecurityEvent = 'rate_limited' | 'unsupported_media_type' | 'payload_too_large' | 'submission_refused';
+export type SecurityEvent =
+  | 'rate_limited'
+  | 'unsupported_media_type'
+  | 'payload_too_large'
+  | 'submission_refused'
+  | 'engine_error';
 
 export type SecurityLogFields = Readonly<Record<string, string | number | boolean>>;
 
