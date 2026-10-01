@@ -56,7 +56,7 @@ No account, password, cookie or personal data exists: the only stored data is th
 | Borrow someone else's rate limit, or forge the log | `X-Forwarded-For` is ignored unless `TRUST_PROXY` says how many proxies stand in front; then only the entry the first of them added counts. IPv6 clients are counted by their /64, IPv4 clients of a dual-stack socket as IPv4. | `client-address.ts` | `client-address.test.ts`, `rate-limit.test.ts` |
 | Learn about the server from an error | Generic JSON errors; the cause goes to the log only; no `Server` or `X-Powered-By` header. | `error-responses.ts` | `create-app.test.ts` |
 | Guess a session id | 128 random bits from the operating system's generator. | `session-id.ts` | `session-id.test.ts` |
-| A malicious dependency | Releases younger than a day are refused (`minimumReleaseAge`, strict), the lockfile is installed frozen, Dependabot proposes updates after a three-day cooldown, pnpm does not run the install scripts of dependencies unless they are allowed and none is, secret scanning and push protection are on. | `pnpm-workspace.yaml`, `.github/dependabot.yml`, `Dockerfile` | `pnpm audit` |
+| A malicious dependency | Releases younger than a day are refused (`minimumReleaseAge`, strict), the lockfile is installed frozen, Dependabot proposes updates (npm, Docker and Actions) after a three-day cooldown, pnpm does not run the install scripts of dependencies unless they are allowed and none is, secret scanning and push protection are on. In the pipeline, Actions are pinned by commit, the `zs` binary by version and SHA-256, the token only reads (the image job also writes packages) and pull requests never see a secret. | `pnpm-workspace.yaml`, `.github/dependabot.yml`, `.github/workflows/ci.yml`, `Dockerfile` | `pnpm audit` |
 
 ## OWASP Top 10:2025
 
@@ -169,6 +169,7 @@ Levels 1 and 2 where they apply to a public, anonymous service, plus a few level
 
 **Deploy**
 
+- The pipeline and the platform that hosts the game are described in [deploy.md](deploy.md). On the ZeroServer Community Cloud the gateway terminates HTTPS and the app runs as one instance.
 - Put the server behind HTTPS. Set `TRUST_PROXY` to the number of reverse proxies that append to `X-Forwarded-For` (`1` for a single platform proxy), otherwise every client shares the proxy's allowance. Leave it at `0` when clients reach the server directly.
 - Keep the database on a persistent volume. Only one instance may use it.
 - Suggested container flags: `--read-only --tmpfs /tmp --cap-drop ALL --security-opt no-new-privileges -v river-raid-data:/data` (untested, see above).
