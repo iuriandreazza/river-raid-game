@@ -14,6 +14,7 @@
     "dev:web": "vite",
     "build": "pnpm typecheck && vite build && tsc -p tsconfig.server.build.json",
     "start": "node dist-server/server/main.js",
+    "moderate": "node server/cli.ts",
     "typecheck": "tsc -b",
     "lint": "eslint .",
     "record-golden-runs": "node scripts/record-golden-runs.ts",

@@ -7,6 +7,7 @@ export function valid<T>(value: T): Parsed<T> {
   return { ok: true, value };
 }
 
+/** The message must never repeat what the caller sent. */
 export function invalid(message: string): Parsed<never> {
   return { ok: false, message };
 }

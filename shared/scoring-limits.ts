@@ -1,7 +1,8 @@
 /**
  * Upper bound of points an honest run can earn per second of play.
- * The API uses it to reject absurd submissions; a test in the game domain checks the engine
- * can never beat it, so the two sides cannot drift apart.
+ * The API plays every run again, so this is no longer what keeps scores honest: it is a safety net that refuses a
+ * score the engine should never produce. A test in the game domain checks the engine can never beat it, so the
+ * two sides cannot drift apart.
  */
 export const MAX_SCORE_PER_SECOND = 300;
 

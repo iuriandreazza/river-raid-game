@@ -40,12 +40,16 @@ export interface TopScoresResponse {
 export type ApiErrorCode =
   | 'invalid_request'
   | 'payload_too_large'
+  | 'unsupported_media_type'
+  | 'rate_limited'
   | 'unknown_session'
   | 'session_already_used'
   | 'implausible_score'
+  | 'initials_not_allowed'
   | 'invalid_replay'
   | 'score_mismatch'
   | 'outdated_client'
+  | 'duplicate_replay'
   | 'internal_error';
 
 export interface ApiErrorResponse {

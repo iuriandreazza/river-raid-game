@@ -1,79 +1,30 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative } from 'node:path';
-import type { Hono } from 'hono';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest';
-import {
-  DEFAULT_PAGE_SIZE,
-  MAX_PAGE_SIZE,
-  MAX_SCORE,
-  type ApiErrorCode,
-  type ApiErrorResponse,
-  type CreateSessionResponse,
-  type LeaderboardEntry,
-  type SubmitScoreResponse,
-  type TopScoresResponse,
-} from '../../../shared/leaderboard-contract.ts';
-import { SCORE_ALLOWANCE } from '../../../shared/scoring-limits.ts';
+import { MAX_DISPLAYED_SCORE } from '../../../shared/game/constants.ts';
+import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from '../../../shared/leaderboard-contract.ts';
 import { LeaderboardService } from '../../application/leaderboard-service.ts';
 import type { LeaderboardStore } from '../../application/ports.ts';
-import { createTestService, ManualClock, SequentialIdGenerator } from '../../testing/fakes.ts';
+import { FakeRunVerifier, ManualClock, SequentialIdGenerator } from '../../testing/fakes.ts';
+import { buildSubmitScoreRequest } from '../../testing/requests.ts';
+import {
+  createWorld,
+  expectApiError,
+  listScores,
+  recordScore,
+  send,
+  sendRaw,
+  startSession,
+  submitScore,
+} from '../../testing/world.ts';
 import { createApp } from './create-app.ts';
-
-/** Mirrors the limit enforced by the API: bodies are tiny, so anything bigger is not a legitimate client. */
-const MAX_BODY_BYTES = 2 * 1024;
 
 const SECRET = 'secret that lives outside the static directory';
 
-function setup(options: { staticDir?: string } = {}) {
-  const { service, clock } = createTestService();
-  return { app: createApp({ service, ...options }), clock };
-}
-
-async function sendRaw(app: Hono, method: string, path: string, body?: string, headers: Record<string, string> = {}) {
-  return await app.request(path, { method, headers: { 'content-type': 'application/json', ...headers }, body });
-}
-
-async function send(app: Hono, method: string, path: string, body?: unknown) {
-  return await sendRaw(app, method, path, body === undefined ? undefined : JSON.stringify(body));
-}
-
-async function startSession(app: Hono): Promise<string> {
-  const response = await send(app, 'POST', '/api/sessions');
-  return ((await response.json()) as CreateSessionResponse).sessionId;
-}
-
-async function submitScore(app: Hono, sessionId: string, initials: string, score: number) {
-  return await send(app, 'POST', '/api/scores', { sessionId, initials, score });
-}
-
-/** Plays a whole run: starts a session and submits straight away, so `score` must fit the flat allowance. */
-async function recordScore(app: Hono, initials: string, score: number): Promise<LeaderboardEntry> {
-  const sessionId = await startSession(app);
-  const response = await submitScore(app, sessionId, initials, score);
-  expect(response.status).toBe(201);
-  return ((await response.json()) as SubmitScoreResponse).entry;
-}
-
-async function listScores(app: Hono, query = ''): Promise<LeaderboardEntry[]> {
-  const response = await send(app, 'GET', `/api/scores${query}`);
-  expect(response.status).toBe(200);
-  return ((await response.json()) as TopScoresResponse).entries;
-}
-
-async function expectApiError(response: Response, status: number, code: ApiErrorCode): Promise<ApiErrorResponse> {
-  expect(response.status).toBe(status);
-  expect(response.headers.get('cache-control')).toBe('no-store');
-  expect(response.headers.get('content-type')).toContain('application/json');
-  const body = (await response.json()) as ApiErrorResponse;
-  expect(body.error.code).toBe(code);
-  expect(body.error.message).not.toBe('');
-  return body;
-}
-
 describe('GET /api/health', () => {
   it('reports that the service is up, uncached', async () => {
-    const { app } = setup();
+    const { app } = createWorld();
 
     const response = await send(app, 'GET', '/api/health');
 
@@ -85,7 +36,7 @@ describe('GET /api/health', () => {
 
 describe('POST /api/sessions', () => {
   it('creates a session and answers 201 with its id, uncached', async () => {
-    const { app } = setup();
+    const { app } = createWorld();
 
     const response = await send(app, 'POST', '/api/sessions');
 
@@ -95,46 +46,57 @@ describe('POST /api/sessions', () => {
   });
 
   it('issues a different id every time', async () => {
-    const { app } = setup();
+    const { app } = createWorld();
 
     expect([await startSession(app), await startSession(app)]).toEqual(['session-1', 'session-2']);
+  });
+
+  it('needs neither a body nor a content type, which is how the web client asks for one', async () => {
+    const { app } = createWorld();
+
+    const response = await app.request('/api/sessions', { method: 'POST' });
+
+    expect(response.status).toBe(201);
   });
 });
 
 describe('POST /api/scores', () => {
   it('records the score and answers 201 with the ranked entry, uncached', async () => {
-    const { app, clock } = setup();
-    const sessionId = await startSession(app);
-    clock.advance(10_000);
+    const world = createWorld();
+    const sessionId = await startSession(world.app);
+    world.clock.advance(10_000);
 
-    const response = await submitScore(app, sessionId, 'ABC', 2_500);
+    const response = await submitScore(world, sessionId, 'ABC', 2_500);
 
     expect(response.status).toBe(201);
     expect(response.headers.get('cache-control')).toBe('no-store');
     expect(await response.json()).toEqual({
-      entry: { rank: 1, initials: 'ABC', score: 2_500, achievedAt: new Date(clock.now()).toISOString() },
+      entry: { rank: 1, initials: 'ABC', score: 2_500, achievedAt: new Date(world.clock.now()).toISOString() },
     });
   });
 
   it('ranks the entry against the scores already on the board', async () => {
-    const { app } = setup();
-    await recordScore(app, 'AAA', 300);
+    const world = createWorld();
+    await recordScore(world, 'AAA', 300);
 
-    expect((await recordScore(app, 'BBB', 500)).rank).toBe(1);
-    expect((await recordScore(app, 'CCC', 100)).rank).toBe(3);
+    expect((await recordScore(world, 'BBB', 500)).rank).toBe(1);
+    expect((await recordScore(world, 'CCC', 100)).rank).toBe(3);
   });
 
   it('ignores properties it does not know', async () => {
-    const { app } = setup();
-    const sessionId = await startSession(app);
+    const world = createWorld();
+    const sessionId = await startSession(world.app);
+    const replay = world.verifier.recordRun(10);
 
-    const response = await send(app, 'POST', '/api/scores', { sessionId, initials: 'ABC', score: 10, admin: true });
+    const request = { ...buildSubmitScoreRequest({ sessionId, score: 10, replay }), admin: true };
+
+    const response = await send(world.app, 'POST', '/api/scores', request);
 
     expect(response.status).toBe(201);
   });
 
   describe('answers 400 invalid_request for', () => {
-    const valid = { sessionId: 'session-1', initials: 'ABC', score: 100 };
+    const valid = buildSubmitScoreRequest();
 
     it.each<[string, string]>([
       ['malformed JSON', '{"sessionId": "session-1", '],
@@ -145,7 +107,7 @@ describe('POST /api/scores', () => {
       ['a JSON string', JSON.stringify('ABC')],
       ['a JSON number', '42'],
     ])('%s', async (_name, rawBody) => {
-      const { app } = setup();
+      const { app } = createWorld();
       await startSession(app);
 
       await expectApiError(await sendRaw(app, 'POST', '/api/scores', rawBody), 400, 'invalid_request');
@@ -165,69 +127,70 @@ describe('POST /api/scores', () => {
       ['a zero score', { ...valid, score: 0 }],
       ['a negative score', { ...valid, score: -1 }],
       ['a fractional score', { ...valid, score: 1.5 }],
-      ['a score above the maximum', { ...valid, score: MAX_SCORE + 1 }],
+      ['a score above the maximum', { ...valid, score: MAX_DISPLAYED_SCORE + 1 }],
       ['a score sent as a string', { ...valid, score: '100' }],
+      ['a missing engineVersion', { ...valid, engineVersion: undefined }],
+      ['an engineVersion sent as a string', { ...valid, engineVersion: '1' }],
+      ['a missing replay', { ...valid, replay: undefined }],
+      ['an empty replay', { ...valid, replay: [] }],
+      ['a replay with an odd number of elements', { ...valid, replay: [1, 1, 2] }],
+      ['a replay with a control no button makes', { ...valid, replay: [99, 1] }],
+      ['a replay that holds the controls for no time', { ...valid, replay: [1, 0] }],
+      ['a replay that does not merge neighbouring runs', { ...valid, replay: [1, 1, 1, 1] }],
     ])('%s', async (_name, body) => {
-      const { app } = setup();
+      const { app } = createWorld();
       await startSession(app);
 
       const response = await send(app, 'POST', '/api/scores', body);
 
       const error = await expectApiError(response, 400, 'invalid_request');
-      expect(error.error.message).toMatch(/sessionId|initials|score/);
+      expect(error.error.message).toMatch(/sessionId|initials|score|engineVersion|replay/);
+    });
+
+    it('without repeating the replay or the values that were wrong', async () => {
+      const { app } = createWorld();
+      const sessionId = await startSession(app);
+      const body = buildSubmitScoreRequest({ sessionId, replay: [77, 4242] });
+
+      const response = await send(app, 'POST', '/api/scores', body);
+
+      const text = JSON.stringify(await response.json());
+      expect(text).not.toContain('77');
+      expect(text).not.toContain('4242');
     });
 
     it('and leaves the session usable afterwards', async () => {
-      const { app } = setup();
-      const sessionId = await startSession(app);
+      const world = createWorld();
+      const sessionId = await startSession(world.app);
 
-      await sendRaw(app, 'POST', '/api/scores', 'not json');
-      await submitScore(app, sessionId, 'abc', 100);
+      await sendRaw(world.app, 'POST', '/api/scores', 'not json');
+      await submitScore(world, sessionId, 'abc', 100);
 
-      expect((await submitScore(app, sessionId, 'ABC', 100)).status).toBe(201);
+      expect((await submitScore(world, sessionId, 'ABC', 100)).status).toBe(201);
     });
   });
 
   it('answers 404 unknown_session for a session that was never issued', async () => {
-    const { app } = setup();
+    const world = createWorld();
 
-    await expectApiError(await submitScore(app, 'never-issued', 'ABC', 100), 404, 'unknown_session');
-    expect(await listScores(app)).toEqual([]);
+    await expectApiError(await submitScore(world, 'never-issued', 'ABC', 100), 404, 'unknown_session');
+    expect(await listScores(world.app)).toEqual([]);
   });
 
   it('answers 409 session_already_used when a session submits twice', async () => {
-    const { app } = setup();
-    const sessionId = await startSession(app);
-    await submitScore(app, sessionId, 'AAA', 500);
+    const world = createWorld();
+    const sessionId = await startSession(world.app);
+    await submitScore(world, sessionId, 'AAA', 500);
 
-    await expectApiError(await submitScore(app, sessionId, 'BBB', 900), 409, 'session_already_used');
-    await expectApiError(await submitScore(app, sessionId, 'AAA', 500), 409, 'session_already_used');
-    expect(await listScores(app)).toHaveLength(1);
-  });
-
-  it('answers 422 implausible_score when the score outruns the time played', async () => {
-    const { app } = setup();
-    const sessionId = await startSession(app);
-
-    await expectApiError(await submitScore(app, sessionId, 'ABC', SCORE_ALLOWANCE + 1), 422, 'implausible_score');
-    expect(await listScores(app)).toEqual([]);
-  });
-
-  it('does not burn the session on an implausible score, and accepts it once enough time has passed', async () => {
-    const { app, clock } = setup();
-    const sessionId = await startSession(app);
-    await submitScore(app, sessionId, 'ABC', SCORE_ALLOWANCE + 1);
-
-    clock.advance(1_000);
-    const response = await submitScore(app, sessionId, 'ABC', SCORE_ALLOWANCE + 1);
-
-    expect(response.status).toBe(201);
+    await expectApiError(await submitScore(world, sessionId, 'BBB', 900), 409, 'session_already_used');
+    await expectApiError(await submitScore(world, sessionId, 'AAA', 500), 409, 'session_already_used');
+    expect(await listScores(world.app)).toHaveLength(1);
   });
 });
 
 describe('GET /api/scores', () => {
   it('answers 200 with an empty list before anyone has scored, uncached', async () => {
-    const { app } = setup();
+    const { app } = createWorld();
 
     const response = await send(app, 'GET', '/api/scores');
 
@@ -237,16 +200,16 @@ describe('GET /api/scores', () => {
   });
 
   it('orders by score, then earliest achievement, then insertion order, with ranks 1..N', async () => {
-    const { app, clock } = setup();
-    await recordScore(app, 'AAA', 300);
-    clock.advance(1_000);
-    await recordScore(app, 'BBB', 500);
-    await recordScore(app, 'CCC', 500);
-    await recordScore(app, 'DDD', 300);
-    clock.advance(1_000);
-    await recordScore(app, 'EEE', 900);
+    const world = createWorld();
+    await recordScore(world, 'AAA', 300);
+    world.clock.advance(1_000);
+    await recordScore(world, 'BBB', 500);
+    await recordScore(world, 'CCC', 500);
+    await recordScore(world, 'DDD', 300);
+    world.clock.advance(1_000);
+    await recordScore(world, 'EEE', 900);
 
-    const entries = await listScores(app);
+    const entries = await listScores(world.app);
 
     expect(entries.map(({ rank, initials, score }) => ({ rank, initials, score }))).toEqual([
       { rank: 1, initials: 'EEE', score: 900 },
@@ -258,32 +221,41 @@ describe('GET /api/scores', () => {
   });
 
   it('formats achievedAt as an ISO-8601 timestamp', async () => {
-    const { app, clock } = setup();
-    await recordScore(app, 'AAA', 300);
+    const world = createWorld();
+    await recordScore(world, 'AAA', 300);
 
-    const [entry] = await listScores(app);
+    const [entry] = await listScores(world.app);
 
-    expect(entry?.achievedAt).toBe(new Date(clock.now()).toISOString());
+    expect(entry?.achievedAt).toBe(new Date(world.clock.now()).toISOString());
+  });
+
+  it('never shows anything but rank, initials, score and time', async () => {
+    const world = createWorld();
+    await recordScore(world, 'AAA', 300);
+
+    const [entry] = await listScores(world.app);
+
+    expect(Object.keys(entry ?? {}).sort()).toEqual(['achievedAt', 'initials', 'rank', 'score']);
   });
 
   it('returns the default page size when no limit is given', async () => {
-    const { app } = setup();
+    const world = createWorld();
     for (let index = 0; index < DEFAULT_PAGE_SIZE + 2; index += 1) {
-      await recordScore(app, 'AAA', 100 + index);
+      await recordScore(world, 'AAA', 100 + index);
     }
 
-    expect(await listScores(app)).toHaveLength(DEFAULT_PAGE_SIZE);
+    expect(await listScores(world.app)).toHaveLength(DEFAULT_PAGE_SIZE);
   });
 
   it('honours the limit, up to the maximum page size', async () => {
-    const { app } = setup();
+    const world = createWorld();
     for (let index = 0; index < 5; index += 1) {
-      await recordScore(app, 'AAA', 100 + index);
+      await recordScore(world, 'AAA', 100 + index);
     }
 
-    expect(await listScores(app, '?limit=3')).toHaveLength(3);
-    expect(await listScores(app, '?limit=1')).toHaveLength(1);
-    expect(await listScores(app, `?limit=${MAX_PAGE_SIZE}`)).toHaveLength(5);
+    expect(await listScores(world.app, '?limit=3')).toHaveLength(3);
+    expect(await listScores(world.app, '?limit=1')).toHaveLength(1);
+    expect(await listScores(world.app, `?limit=${MAX_PAGE_SIZE}`)).toHaveLength(5);
   });
 
   it.each([
@@ -297,51 +269,9 @@ describe('GET /api/scores', () => {
     ['hexadecimal', '0x10'],
     ['exponential', '1e1'],
   ])('answers 400 invalid_request for a limit that is %s', async (_name, limit) => {
-    const { app } = setup();
+    const { app } = createWorld();
 
     await expectApiError(await send(app, 'GET', `/api/scores?limit=${encodeURIComponent(limit)}`), 400, 'invalid_request');
-  });
-});
-
-describe('request body limit', () => {
-  const body = { sessionId: 'session-1', initials: 'ABC', score: 100 };
-
-  function paddedBody(totalBytes: number): string {
-    return JSON.stringify(body).padEnd(totalBytes, ' ');
-  }
-
-  it('accepts a body of exactly the limit', async () => {
-    const { app } = setup();
-    await startSession(app);
-
-    const response = await sendRaw(app, 'POST', '/api/scores', paddedBody(MAX_BODY_BYTES));
-
-    expect(response.status).toBe(201);
-  });
-
-  it('answers 413 for a body above the limit when the size is announced up front', async () => {
-    const { app } = setup();
-    const oversized = paddedBody(MAX_BODY_BYTES + 1);
-
-    const response = await sendRaw(app, 'POST', '/api/scores', oversized, { 'content-length': String(oversized.length) });
-
-    await expectApiError(response, 413, 'payload_too_large');
-  });
-
-  it('answers 413 for a body above the limit when the size is only known while reading', async () => {
-    const { app } = setup();
-
-    const response = await sendRaw(app, 'POST', '/api/scores', paddedBody(MAX_BODY_BYTES + 1));
-
-    await expectApiError(response, 413, 'payload_too_large');
-  });
-
-  it('also protects the endpoint that does not read a body', async () => {
-    const { app } = setup();
-
-    const response = await sendRaw(app, 'POST', '/api/sessions', 'x'.repeat(MAX_BODY_BYTES + 1));
-
-    await expectApiError(response, 413, 'payload_too_large');
   });
 });
 
@@ -361,7 +291,7 @@ describe('unknown API routes', () => {
     ['without static hosting', false],
     ['with static hosting, which must not swallow them', true],
   ])('%s', (_name, hosted) => {
-    const appFor = () => setup(hosted ? { staticDir: siteDir } : {}).app;
+    const appFor = () => createWorld(hosted ? { staticDir: siteDir } : {}).app;
 
     it.each([
       ['GET', '/api/nope'],
@@ -372,6 +302,10 @@ describe('unknown API routes', () => {
       ['GET', '/api/sessions'],
       ['DELETE', '/api/scores'],
       ['GET', '/api/health/deeper'],
+      // The router's wildcard stops at a line break, so these used to match nothing and get a bare 404.
+      ['GET', '/api/%0Anope'],
+      ['GET', '/api/nope%0D%0Aset-cookie:x'],
+      ['POST', '/api/%0A'],
     ])('answers %s %s with a JSON 404', async (method, path) => {
       await expectApiError(await send(appFor(), method, path), 404, 'invalid_request');
     });
@@ -386,6 +320,7 @@ describe('unexpected failures', () => {
   const brokenStore: LeaderboardStore = {
     saveSession: fail,
     findSession: fail,
+    isSessionUsed: fail,
     deleteUnusedSessionsStartedBefore: fail,
     addScore: fail,
     topScores: fail,
@@ -395,6 +330,7 @@ describe('unexpected failures', () => {
       store: brokenStore,
       clock: new ManualClock(),
       ids: new SequentialIdGenerator(),
+      verifier: new FakeRunVerifier(),
     }),
   });
   let consoleError: MockInstance;
@@ -409,7 +345,7 @@ describe('unexpected failures', () => {
 
   it.each([
     ['POST', '/api/sessions', undefined],
-    ['POST', '/api/scores', { sessionId: 'session-1', initials: 'ABC', score: 100 }],
+    ['POST', '/api/scores', buildSubmitScoreRequest()],
     ['GET', '/api/scores', undefined],
   ])('answers %s %s with a generic 500 and logs the cause', async (method, path, body) => {
     const response = await send(brokenApp, method, path, body);
@@ -443,7 +379,7 @@ describe('static hosting', () => {
     ['an absolute path', () => siteDir],
     ['a path relative to the working directory', () => relative(process.cwd(), siteDir)],
   ])('serves the files of the directory given as %s', async (_name, staticDir) => {
-    const { app } = setup({ staticDir: staticDir() });
+    const { app } = createWorld({ staticDir: staticDir() });
 
     const response = await app.request('/assets/app.js');
 
@@ -453,7 +389,7 @@ describe('static hosting', () => {
   });
 
   it('can host the working directory itself', async () => {
-    const { app } = setup({ staticDir: process.cwd() });
+    const { app } = createWorld({ staticDir: process.cwd() });
 
     const response = await app.request('/package.json');
 
@@ -462,7 +398,7 @@ describe('static hosting', () => {
   });
 
   it.each(['/', '/index.html'])('serves the shell at %s', async (path) => {
-    const { app } = setup({ staticDir: siteDir });
+    const { app } = createWorld({ staticDir: siteDir });
 
     const response = await app.request(path);
 
@@ -474,7 +410,7 @@ describe('static hosting', () => {
   it.each(['/play', '/scores/weekly', '/apiary', '/api-docs'])(
     'falls back to the shell for the client-side route %s',
     async (path) => {
-      const { app } = setup({ staticDir: siteDir });
+      const { app } = createWorld({ staticDir: siteDir });
 
       const response = await app.request(path);
 
@@ -487,7 +423,7 @@ describe('static hosting', () => {
   it.each(['/assets/missing.js', '/missing.css', '/deep/missing.png'])(
     'answers 404, not the shell, for the missing file %s',
     async (path) => {
-      const { app } = setup({ staticDir: siteDir });
+      const { app } = createWorld({ staticDir: siteDir });
 
       const response = await app.request(path);
 
@@ -496,20 +432,49 @@ describe('static hosting', () => {
     },
   );
 
-  it('lets browsers keep the fingerprinted assets forever, but always revalidate the shell', async () => {
-    const { app } = setup({ staticDir: siteDir });
+  describe('tells browsers what they may keep', () => {
+    it('lets them keep a fingerprinted asset that was really served for ever', async () => {
+      const { app } = createWorld({ staticDir: siteDir });
 
-    const asset = await app.request('/assets/app.js');
-    expect(asset.headers.get('cache-control')).toBe('public, max-age=31536000, immutable');
+      const asset = await app.request('/assets/app.js');
 
-    for (const path of ['/', '/index.html', '/play']) {
+      expect(asset.status).toBe(200);
+      expect(asset.headers.get('cache-control')).toBe('public, max-age=31536000, immutable');
+    });
+
+    it.each(['/', '/index.html', '/play'])('makes them check the shell again every time (%s)', async (path) => {
+      const { app } = createWorld({ staticDir: siteDir });
+
       const shell = await app.request(path);
-      expect(shell.headers.get('cache-control'), path).toBe('no-cache');
-    }
+
+      expect(shell.headers.get('cache-control')).toBe('no-cache');
+    });
+
+    // These are answered with the shell, which must not be pinned for ever to a URL that may hold a file one day.
+    it.each(['/assets/', '/assets/nothing', '/assets/nothing/deeper', '/assets/%E0%A4%A'])(
+      'does not let them keep the shell that stands in for %s',
+      async (path) => {
+        const { app } = createWorld({ staticDir: siteDir });
+
+        const response = await app.request(path);
+
+        expect(response.status).toBe(200);
+        expect(await response.text()).toContain('River Raid shell');
+        expect(response.headers.get('cache-control')).toBe('no-cache');
+      },
+    );
+
+    it('says nothing about what is not there', async () => {
+      const { app } = createWorld({ staticDir: siteDir });
+
+      const response = await app.request('/assets/missing.js');
+
+      expect(response.headers.get('cache-control') ?? '').not.toContain('immutable');
+    });
   });
 
   it('answers HEAD requests without a body', async () => {
-    const { app } = setup({ staticDir: siteDir });
+    const { app } = createWorld({ staticDir: siteDir });
 
     const response = await app.request('/', { method: 'HEAD' });
 
@@ -518,7 +483,7 @@ describe('static hosting', () => {
   });
 
   it('only serves files for GET and HEAD', async () => {
-    const { app } = setup({ staticDir: siteDir });
+    const { app } = createWorld({ staticDir: siteDir });
 
     expect((await app.request('/', { method: 'POST' })).status).toBe(404);
     expect((await app.request('/assets/app.js', { method: 'DELETE' })).status).toBe(404);
@@ -533,36 +498,81 @@ describe('static hosting', () => {
     '/assets/..%2f..%2fsecret.txt',
     '/assets/%2e%2e/%2e%2e/secret.txt',
   ])('never serves files from outside the static directory (%s)', async (path) => {
-    const { app } = setup({ staticDir: siteDir });
+    const { app } = createWorld({ staticDir: siteDir });
 
     const response = await app.request(path);
 
     expect(await response.text()).not.toContain(SECRET);
   });
 
-  it.each(['/', '/assets/app.js', '/api/health', '/missing.css'])('sends security headers with %s', async (path) => {
-    const { app } = setup({ staticDir: siteDir });
-
-    const { headers } = await app.request(path);
-
-    expect(headers.get('x-content-type-options')).toBe('nosniff');
-    expect(headers.get('x-frame-options')).toBe('SAMEORIGIN');
-    expect(headers.get('content-security-policy')).toContain("default-src 'none'");
-    expect(headers.get('content-security-policy')).toContain("script-src 'self'");
-    expect(headers.get('content-security-policy')).toContain("frame-ancestors 'none'");
-  });
-
   it('keeps the API working alongside the site', async () => {
-    const { app } = setup({ staticDir: siteDir });
+    const world = createWorld({ staticDir: siteDir });
 
-    expect(await (await app.request('/api/health')).json()).toEqual({ status: 'ok' });
-    expect(await recordScore(app, 'ABC', 100)).toMatchObject({ rank: 1, initials: 'ABC' });
+    expect(await (await world.app.request('/api/health')).json()).toEqual({ status: 'ok' });
+    expect(await recordScore(world, 'ABC', 100)).toMatchObject({ rank: 1, initials: 'ABC' });
   });
 
   it('answers 404 for everything when no directory is given', async () => {
-    const { app } = setup();
+    const { app } = createWorld();
 
     expect((await app.request('/')).status).toBe(404);
     expect((await app.request('/assets/app.js')).status).toBe(404);
+  });
+});
+
+describe('security headers', () => {
+  let siteDir: string;
+
+  beforeAll(() => {
+    siteDir = mkdtempSync(join(tmpdir(), 'river-raid-headers-'));
+    writeFileSync(join(siteDir, 'index.html'), '<!doctype html><title>shell</title>');
+    writeFileSync(join(siteDir, 'app.js'), '');
+  });
+
+  afterAll(() => {
+    rmSync(siteDir, { recursive: true, force: true });
+  });
+
+  it.each(['/', '/app.js', '/api/health', '/missing.css', '/api/nope', '/api/%0Anope', '/%0Anope', '/nope%0A'])(
+    'are sent with %s',
+    async (path) => {
+      const { app } = createWorld({ staticDir: siteDir });
+
+      const { headers } = await app.request(path);
+
+      expect(headers.get('x-content-type-options')).toBe('nosniff');
+      expect(headers.get('x-frame-options')).toBe('SAMEORIGIN');
+      expect(headers.get('content-security-policy')).toContain("default-src 'none'");
+      expect(headers.get('content-security-policy')).toContain("script-src 'self'");
+      expect(headers.get('content-security-policy')).toContain("frame-ancestors 'none'");
+    },
+  );
+
+  it.each(['/', '/api/health', '/missing.css', '/nope%0A'])('make the browser stay on HTTPS for a year (%s)', async (path) => {
+    const { app } = createWorld({ staticDir: siteDir });
+
+    const { headers } = await app.request(path);
+
+    expect(headers.get('strict-transport-security')).toBe('max-age=31536000; includeSubDomains');
+  });
+
+  it.each(['/', '/api/health', '/missing.css'])('deny the browser features a game has no use for (%s)', async (path) => {
+    const { app } = createWorld({ staticDir: siteDir });
+
+    const policy = (await app.request(path)).headers.get('permissions-policy') ?? '';
+
+    for (const feature of ['camera', 'microphone', 'geolocation', 'payment', 'usb', 'bluetooth', 'serial', 'hid', 'midi']) {
+      expect(policy, feature).toContain(`${feature}=()`);
+    }
+  });
+
+  it('leave alone the features a game may want', async () => {
+    const { app } = createWorld({ staticDir: siteDir });
+
+    const policy = (await app.request('/')).headers.get('permissions-policy') ?? '';
+
+    for (const feature of ['gamepad', 'fullscreen', 'autoplay', 'screen-wake-lock']) {
+      expect(policy, feature).not.toContain(feature);
+    }
   });
 });

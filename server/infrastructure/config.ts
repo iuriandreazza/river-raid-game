@@ -4,12 +4,16 @@ const DEFAULT_DATABASE_PATH = 'data/leaderboard.sqlite';
 const DEFAULT_STATIC_DIR = 'dist';
 
 const PORT_PATTERN = /^[0-9]{1,5}$/;
+const TRUST_PROXY_PATTERN = /^[0-9]{1,2}$/;
 
 export interface ServerConfig {
   readonly port: number;
   readonly databasePath: string;
   /** Undefined when the API should not host the web client. */
   readonly staticDir: string | undefined;
+  /** How many reverse proxies stand in front of the server, each appending to X-Forwarded-For; 0 for none. */
+  readonly trustProxy: number;
+  readonly logClientAddress: boolean;
 }
 
 /** A variable that is set but blank counts as unset, as `.env` files often declare `NAME=` to mean "default". */
@@ -28,6 +32,27 @@ function parsePort(rawPort: string | undefined): number {
   return Number(rawPort);
 }
 
+function parseTrustProxy(rawProxies: string | undefined): number {
+  if (rawProxies === undefined) {
+    return 0;
+  }
+  if (!TRUST_PROXY_PATTERN.test(rawProxies)) {
+    throw new Error(`TRUST_PROXY must be the number of reverse proxies, from 0 to 99, got "${rawProxies}".`);
+  }
+  return Number(rawProxies);
+}
+
+function parseFlag(name: string, rawFlag: string | undefined): boolean {
+  if (rawFlag === undefined) {
+    return false;
+  }
+  const flag = rawFlag.toLowerCase();
+  if (flag !== 'true' && flag !== 'false') {
+    throw new Error(`${name} must be "true" or "false", got "${rawFlag}".`);
+  }
+  return flag === 'true';
+}
+
 function resolveStaticDir(configured: string | undefined, isDirectory: (path: string) => boolean): string | undefined {
   if (configured === undefined) {
     return isDirectory(DEFAULT_STATIC_DIR) ? DEFAULT_STATIC_DIR : undefined;
@@ -39,10 +64,17 @@ function resolveStaticDir(configured: string | undefined, isDirectory: (path: st
   return configured;
 }
 
+/** Apart from the rest of the configuration so that the moderation CLI, which needs only the database, ignores a bad PORT. */
+export function readDatabasePath(env: NodeJS.ProcessEnv): string {
+  return readVariable(env, 'DATABASE_PATH') ?? DEFAULT_DATABASE_PATH;
+}
+
 export function loadConfig(env: NodeJS.ProcessEnv, isDirectory: (path: string) => boolean): ServerConfig {
   return {
     port: parsePort(readVariable(env, 'PORT')),
-    databasePath: readVariable(env, 'DATABASE_PATH') ?? DEFAULT_DATABASE_PATH,
+    databasePath: readDatabasePath(env),
     staticDir: resolveStaticDir(readVariable(env, 'STATIC_DIR'), isDirectory),
+    trustProxy: parseTrustProxy(readVariable(env, 'TRUST_PROXY')),
+    logClientAddress: parseFlag('LOG_CLIENT_ADDRESS', readVariable(env, 'LOG_CLIENT_ADDRESS')),
   };
 }

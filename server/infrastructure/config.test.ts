@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { loadConfig } from './config.ts';
+import { loadConfig, readDatabasePath } from './config.ts';
 
 const noDirectories = () => false;
 const onlyDist = (path: string) => path === 'dist';
@@ -10,6 +10,8 @@ describe('loadConfig', () => {
       port: 8787,
       databasePath: 'data/leaderboard.sqlite',
       staticDir: undefined,
+      trustProxy: 0,
+      logClientAddress: false,
     });
   });
 
@@ -18,9 +20,24 @@ describe('loadConfig', () => {
   });
 
   it('reads every setting from the environment', () => {
-    const config = loadConfig({ PORT: '9000', DATABASE_PATH: '/var/lib/lb.sqlite', STATIC_DIR: 'public' }, (path) => path === 'public');
+    const config = loadConfig(
+      {
+        PORT: '9000',
+        DATABASE_PATH: '/var/lib/lb.sqlite',
+        STATIC_DIR: 'public',
+        TRUST_PROXY: '2',
+        LOG_CLIENT_ADDRESS: 'true',
+      },
+      (path) => path === 'public',
+    );
 
-    expect(config).toEqual({ port: 9000, databasePath: '/var/lib/lb.sqlite', staticDir: 'public' });
+    expect(config).toEqual({
+      port: 9000,
+      databasePath: '/var/lib/lb.sqlite',
+      staticDir: 'public',
+      trustProxy: 2,
+      logClientAddress: true,
+    });
   });
 
   it('prefers an explicit STATIC_DIR over dist', () => {
@@ -28,9 +45,18 @@ describe('loadConfig', () => {
   });
 
   it('treats blank variables as unset', () => {
-    const config = loadConfig({ PORT: '', DATABASE_PATH: '  ', STATIC_DIR: '' }, onlyDist);
+    const config = loadConfig(
+      { PORT: '', DATABASE_PATH: '  ', STATIC_DIR: '', TRUST_PROXY: ' ', LOG_CLIENT_ADDRESS: '' },
+      onlyDist,
+    );
 
-    expect(config).toEqual({ port: 8787, databasePath: 'data/leaderboard.sqlite', staticDir: 'dist' });
+    expect(config).toEqual({
+      port: 8787,
+      databasePath: 'data/leaderboard.sqlite',
+      staticDir: 'dist',
+      trustProxy: 0,
+      logClientAddress: false,
+    });
   });
 
   it.each([['0'], ['65535']])('accepts PORT=%s', (port) => {
@@ -46,5 +72,39 @@ describe('loadConfig', () => {
 
   it('rejects a STATIC_DIR that is not an existing directory', () => {
     expect(() => loadConfig({ STATIC_DIR: 'missing' }, onlyDist)).toThrow(/STATIC_DIR/);
+  });
+
+  describe('TRUST_PROXY', () => {
+    it.each([['0', 0], ['1', 1], ['2', 2], ['99', 99]])('accepts %s proxies', (value, expected) => {
+      expect(loadConfig({ TRUST_PROXY: value }, noDirectories).trustProxy).toBe(expected);
+    });
+
+    it.each([['-1'], ['1.5'], ['abc'], ['true'], ['100'], ['0x1'], ['1 2'], ['+1']])('rejects %s', (value) => {
+      expect(() => loadConfig({ TRUST_PROXY: value }, noDirectories)).toThrow(/TRUST_PROXY/);
+    });
+  });
+
+  describe('LOG_CLIENT_ADDRESS', () => {
+    it.each([['true', true], ['TRUE', true], ['false', false], ['False', false]])('reads %s', (value, expected) => {
+      expect(loadConfig({ LOG_CLIENT_ADDRESS: value }, noDirectories).logClientAddress).toBe(expected);
+    });
+
+    it.each([['1'], ['yes'], ['on'], ['0'], ['enabled']])('rejects %s rather than guessing what was meant', (value) => {
+      expect(() => loadConfig({ LOG_CLIENT_ADDRESS: value }, noDirectories)).toThrow(/LOG_CLIENT_ADDRESS/);
+    });
+  });
+});
+
+describe('readDatabasePath', () => {
+  it('defaults to a file under data/', () => {
+    expect(readDatabasePath({})).toBe('data/leaderboard.sqlite');
+  });
+
+  it('reads DATABASE_PATH, ignoring surrounding blanks', () => {
+    expect(readDatabasePath({ DATABASE_PATH: ' /var/lib/lb.sqlite ' })).toBe('/var/lib/lb.sqlite');
+  });
+
+  it('does not care whether the rest of the environment is valid', () => {
+    expect(readDatabasePath({ PORT: 'not-a-port', TRUST_PROXY: 'many', DATABASE_PATH: 'x.sqlite' })).toBe('x.sqlite');
   });
 });
