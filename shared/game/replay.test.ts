@@ -68,6 +68,7 @@ describe('replayProblem', () => {
     ['a zero length', [1, 0]],
     ['a negative length', [1, -4]],
     ['a text length', [1, '5']],
+    ['neighbouring runs with the same controls', [1, 5, 0, 2, 0, 3]],
     ['a non-finite length', [1, Infinity]],
     ['a run that is too long', [1, MAX_REPLAY_TICKS + 1]],
     ['runs that add up to too long', [1, MAX_REPLAY_TICKS, 2, 1]],
@@ -80,7 +81,7 @@ describe('replayProblem', () => {
     ['one run', [1, 5]],
     ['several runs', [1, 5, 0, 3, 31, 1]],
     ['the longest run allowed', [0, MAX_REPLAY_TICKS]],
-    ['the most runs allowed', Array.from({ length: MAX_REPLAY_RUNS * 2 }, () => 1)],
+    ['the most runs allowed', Array.from({ length: MAX_REPLAY_RUNS * 2 }, (_, i) => (i % 2 === 0 ? (i / 2) % 2 : 1))],
   ])('accepts %s', (_name, value) => {
     expect(replayProblem(value)).toBeNull();
   });

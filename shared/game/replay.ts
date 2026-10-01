@@ -81,6 +81,8 @@ export function replayProblem(value: unknown): string | null {
       return `replay controls must be integers from 0 to ${ALL_CONTROLS}.`;
     }
     if (!isInteger(held) || held < 1) return 'replay tick counts must be positive integers.';
+    // One way to write each game down, so that the same game cannot be sent twice dressed up as two different replays.
+    if (i >= 2 && controls === value[i - 2]) return 'replay must merge neighbouring runs that hold the same controls.';
     ticks += held;
     if (ticks > MAX_REPLAY_TICKS) return `replay must not be longer than ${MAX_REPLAY_TICKS} ticks.`;
   }
