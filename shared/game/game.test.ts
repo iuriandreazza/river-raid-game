@@ -18,7 +18,7 @@ import {
   STARTING_RESERVE_JETS,
   type EnemyKind,
 } from './constants.ts';
-import { advance, createGame } from './game.ts';
+import { advance, createGame, effectiveInput } from './game.ts';
 import type { RiverRow } from './river.ts';
 import { NO_INPUT, type Enemy, type GameEvent, type GameState, type Input } from './types.ts';
 import { noseRowOf } from './view.ts';
@@ -81,6 +81,32 @@ function crashJet(state: GameState): GameEvent[] {
 function shootOnce(state: GameState, ticks = 25): GameEvent[] {
   return [...run(state, 1, input({ fire: true })), ...run(state, ticks)];
 }
+
+describe('effective controls', () => {
+  const everything = input({ left: true, up: true, fire: true });
+
+  it('are all the controls that the engine listens to while the jet flies', () => {
+    expect(effectiveInput(openGame(), everything)).toEqual(everything);
+  });
+
+  it('leave out directions that cancel each other', () => {
+    const state = openGame();
+    expect(effectiveInput(state, input({ left: true, right: true, up: true, down: true }))).toEqual(NO_INPUT);
+    expect(effectiveInput(state, input({ right: true, down: true }))).toEqual(input({ right: true, down: true }));
+  });
+
+  it('leave out the fire button while a missile is in the air', () => {
+    const state = openGame();
+    state.missile = { x: 80, y: 10 };
+    expect(effectiveInput(state, everything)).toEqual(input({ left: true, up: true }));
+  });
+
+  it.each(['dying', 'gameOver'] as const)('leave out everything while the game is %s', (phase) => {
+    const state = openGame();
+    state.phase = phase;
+    expect(effectiveInput(state, everything)).toEqual(NO_INPUT);
+  });
+});
 
 describe('a new game', () => {
   it('starts mid-river with a full tank, the spare jets and no points', () => {

@@ -24,16 +24,17 @@ import {
   SCROLL_SPEEDS,
   STARTING_RESERVE_JETS,
 } from './constants.ts';
-import type {
-  CrashCause,
-  Enemy,
-  Explosion,
-  FuelDepot,
-  GameEvent,
-  GameState,
-  Input,
-  Rect,
-  SpeedLevel,
+import {
+  NO_INPUT,
+  type CrashCause,
+  type Enemy,
+  type Explosion,
+  type FuelDepot,
+  type GameEvent,
+  type GameState,
+  type Input,
+  type Rect,
+  type SpeedLevel,
 } from './types.ts';
 import { jetColumn, noseRowOf } from './view.ts';
 import { World } from './world.ts';
@@ -86,6 +87,23 @@ export function advance(state: GameState, input: Input): GameEvent[] {
   if (state.phase === 'playing') stepPlaying(state, input, events);
   else if (state.phase === 'dying') stepDying(state, events);
   return events;
+}
+
+/**
+ * The controls the engine really acts on during this tick; whatever else a recording says is noise. The jet does not
+ * listen while it explodes, left and right (or up and down) held together cancel out, and a missile cannot be fired
+ * while another one is in the air. Recordings that only differ in such controls are the same game, which is what
+ * `steer`, `speedLevelFor` and the fire check in `stepPlaying` guarantee: keep them in step with this function.
+ */
+export function effectiveInput(state: GameState, input: Input): Input {
+  if (state.phase !== 'playing') return NO_INPUT;
+  return {
+    left: input.left && !input.right,
+    right: input.right && !input.left,
+    up: input.up && !input.down,
+    down: input.down && !input.up,
+    fire: input.fire && state.missile === null,
+  };
 }
 
 function stepPlaying(state: GameState, input: Input, events: GameEvent[]): void {

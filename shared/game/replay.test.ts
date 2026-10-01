@@ -10,10 +10,11 @@ import {
   replayTicks,
   verifyReplay,
 } from './replay.ts';
+import { advance, createGame, effectiveInput } from './game.ts';
 import { GOLDEN_RUNS, GOLDEN_RUNS_ENGINE_VERSION, GOLDEN_WORLD_DIGEST } from './testing/golden-runs.ts';
 import { cautiousPilot, noisyPolicy, recordRun } from './testing/pilot.ts';
 import { GOLDEN_WORLD_SECTIONS, worldDigest } from './testing/world-digest.ts';
-import { NO_INPUT, type Input } from './types.ts';
+import { NO_INPUT, type GameState, type Input } from './types.ts';
 
 const input = (overrides: Partial<Input>): Input => ({ ...NO_INPUT, ...overrides });
 
@@ -123,6 +124,27 @@ describe('verifyReplay', () => {
     const handsOff = run.replay.map((value, index) => (index % 2 === 0 ? 0 : value));
     const verdict = verifyReplay(handsOff);
     expect(verdict.ok && verdict.score === run.score).toBe(false);
+  });
+});
+
+describe('effectiveInput', () => {
+  /** Everything that decides how a game goes on, except the river, which is the same for every game. */
+  const outcomeOf = (state: GameState): string =>
+    JSON.stringify({ ...state, world: null, destroyedBridges: [...state.destroyedBridges] });
+
+  it('only leaves out controls that the engine would have ignored', () => {
+    // One game gets what the player pressed, the other what the engine listens to: they must never drift apart.
+    for (let seed = 1; seed <= 20; seed++) {
+      const policy = noisyPolicy(seed);
+      const pressed = createGame();
+      const listened = createGame();
+      for (let tick = 0; pressed.phase !== 'gameOver'; tick++) {
+        const controls = policy(pressed, tick);
+        advance(pressed, controls);
+        advance(listened, effectiveInput(listened, controls));
+        expect(outcomeOf(listened), `seed ${seed}, tick ${tick}`).toBe(outcomeOf(pressed));
+      }
+    }
   });
 });
 
