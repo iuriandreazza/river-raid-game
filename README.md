@@ -2,6 +2,8 @@
 
 A browser tribute to the 1982 Atari 2600 classic, built with React and TypeScript, with a **global leaderboard**.
 
+![The game: a jet over the river with a fuel depot, a helicopter, a tanker and an explosion](docs/screenshot.png)
+
 Fly upstream, shoot everything that moves, blow up the bridges and keep an eye on the fuel gauge. The river is the same on every run, so scores are comparable between pilots.
 
 > Fan-made tribute. *River Raid* was created by Carol Shaw and published by Activision, which is not affiliated with and does not endorse this project. The code, sprites and sounds here are original: nothing was taken from the cartridge.
