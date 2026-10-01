@@ -59,7 +59,8 @@ function clamp(value: number, min: number, max: number): number {
 
 /**
  * Draws a river one row at a time. Banks move at most BANK_SLOPE columns per row, which is what
- * keeps every shape steerable at the fastest scroll speed.
+ * keeps every shape steerable at the normal scroll speed: the jet slides one column per tick at most,
+ * so the steepest bends cannot be followed at the fast one.
  */
 class RiverPen {
   readonly rows: RiverRow[] = [];

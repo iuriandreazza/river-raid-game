@@ -15,7 +15,7 @@ interface Span {
   end: number;
 }
 
-/** The jet is tested row by row against its silhouette, as the original hardware did per pixel. */
+/** The jet is tested row by row against the outer edges of its silhouette, as the original hardware did per scanline. */
 const PLAYER_ROW_SPANS: readonly Span[] = PLAYER_SHAPE.map((row) => ({
   start: row.indexOf('#'),
   end: row.lastIndexOf('#') + 1,

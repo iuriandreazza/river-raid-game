@@ -1,6 +1,6 @@
 import { PLAYER_NOSE_ROW } from './constants.ts';
 
-/** World row of the jet's nose: the whole simulation snaps to whole rows, like the original scanlines. */
+/** World row of the jet's nose. The jet and the river sit on whole rows, like the original scanlines; only a missile can be between two. */
 export function noseRowOf(scroll: number): number {
   return Math.floor(scroll);
 }

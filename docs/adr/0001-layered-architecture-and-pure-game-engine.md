@@ -28,7 +28,7 @@ Split the web client in four layers that only depend inwards, with the browser k
 
 ESLint `no-restricted-imports` rules make the direction of the dependencies a build error. The API follows the same shape (`server/domain`, `server/application`, `server/infrastructure`).
 
-The simulation uses whole rows and columns, like the original scanlines, and runs at a fixed step; rendering interpolates nothing.
+The jet and the river sit on whole rows and columns, like the original scanlines, and the simulation runs at a fixed step; rendering interpolates nothing. Things that move by a fraction of a column or of a row per tick (enemies, the jet while it ramps up, a missile at the slow and fast speeds) are drawn on the nearest whole pixel.
 
 ## Consequences
 
