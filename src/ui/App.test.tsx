@@ -62,6 +62,20 @@ describe('title screen', () => {
     expect(await screen.findByRole('table')).toBeTruthy();
   });
 
+  it('leaves Enter and Space to the button that has the focus', async () => {
+    const { services, leaderboard } = createFakeServices();
+    leaderboard.entries = [entry(1, 'AAA', 100)];
+    leaderboard.topScores.mockRejectedValueOnce(new LeaderboardError('network', 'down'));
+    render(<App services={services} />);
+    const tryAgain = await screen.findByRole('button', { name: /try again/i });
+
+    for (const code of ['Enter', 'Space']) {
+      expect(fireEvent.keyDown(tryAgain, { code }), `${code} was taken from the button`).toBe(true);
+    }
+
+    expect(screen.queryByRole('img', { name: /game screen/i })).toBeNull();
+  });
+
   it('starts a run with Enter and registers it with the leaderboard', async () => {
     const { games, leaderboard } = startGame();
     expect(games).toHaveLength(1);
