@@ -65,7 +65,9 @@ export class CanvasRenderer implements RendererPort {
     const { missile } = state;
     if (!missile) return;
     this.ctx.fillStyle = COLORS.missile;
-    this.ctx.fillRect(missile.x, screenRowOf(state.scroll, missile.y + MISSILE_HEIGHT - 1), MISSILE_WIDTH, MISSILE_HEIGHT);
+    // The missile is between two rows at the slow and fast speeds, but the screen only has whole ones.
+    const lowestRow = Math.floor(missile.y);
+    this.ctx.fillRect(missile.x, screenRowOf(state.scroll, lowestRow + MISSILE_HEIGHT - 1), MISSILE_WIDTH, MISSILE_HEIGHT);
   }
 
   private drawJet(state: GameState): void {

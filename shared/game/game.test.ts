@@ -10,6 +10,7 @@ import {
   MAX_RESERVE_JETS,
   OBJECT_SIZES,
   PLAYER_HEIGHT,
+  PLAYER_WIDTH,
   POINTS,
   REFUEL_PER_TICK,
   SCREEN_WIDTH,
@@ -298,6 +299,31 @@ describe('bridges', () => {
     expect(events).toContainEqual({ type: 'bridgeDestroyed' });
     expect(state.destroyedBridges.has(0)).toBe(true);
     expect(state.score).toBe(POINTS.bridge);
+  });
+
+  describe('when the missile is between two rows', () => {
+    // The real river is needed: it is the water of the bridge, not the wide-open test river, that decides a hit.
+    function missileInsideBridge(x: number): GameState {
+      const state = createGame();
+      state.scroll = state.world.bridgeBottom(0) - 100;
+      state.spawnCursor = state.scroll;
+      const water = state.world.rowAt(noseRowOf(state.scroll));
+      state.playerX = Math.floor((water.left + water.right - PLAYER_WIDTH) / 2);
+      state.missile = { x, y: state.world.bridgeBottom(0) + 2.5 };
+      return state;
+    }
+
+    it('blows up the bridge when the missile is over the water', () => {
+      const state = missileInsideBridge(SCREEN_WIDTH / 2);
+      expect(run(state, 1, input({ up: true }))).toContainEqual({ type: 'bridgeDestroyed' });
+    });
+
+    it('keeps flying over the road on the bank, which is solid', () => {
+      const state = missileInsideBridge(4);
+      expect(run(state, 1, input({ up: true }))).toEqual([]);
+      expect(state.missile).not.toBeNull();
+      expect(state.destroyedBridges.size).toBe(0);
+    });
   });
 
   it('kills the jet when it flies into an intact bridge', () => {

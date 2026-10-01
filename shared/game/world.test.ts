@@ -32,6 +32,13 @@ describe('World', () => {
     }
   });
 
+  it('reads the row that a position between two rows falls in', () => {
+    const world = new World();
+    for (const row of [0, 40, SECTION_LENGTH - 1, SECTION_LENGTH, 3 * SECTION_LENGTH + 700]) {
+      expect(world.rowAt(row + 0.5)).toBe(world.rowAt(row));
+    }
+  });
+
   it('makes consecutive sections different', () => {
     const world = new World();
     expect(world.plan(3).rows).not.toEqual(world.plan(4).rows);

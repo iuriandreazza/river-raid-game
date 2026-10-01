@@ -41,9 +41,12 @@ export class World {
     return plan;
   }
 
-  /** Rows below the start of the river reuse the first row, so the view is never empty. */
+  /**
+   * The row a position falls in: the scroll speeds move missiles by half a row, so positions are
+   * not always whole. Rows below the start of the river reuse the first row, so the view is never empty.
+   */
   rowAt(worldRow: number): RiverRow {
-    const row = Math.max(0, worldRow);
+    const row = Math.max(0, Math.floor(worldRow));
     const plan = this.plan(this.sectionIndexAt(row));
     return plan.rows[row - plan.startRow]!;
   }
