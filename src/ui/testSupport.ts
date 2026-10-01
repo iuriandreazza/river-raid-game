@@ -1,7 +1,6 @@
 import { vi } from 'vitest';
 import type { LeaderboardEntry } from '../../shared/leaderboard-contract.ts';
-import type { LeaderboardPort, Preferences, RunningGame } from '../application/ports.ts';
-import type { RunResult } from '../application/ports.ts';
+import type { LeaderboardPort, Preferences, RunResult, RunningGame } from '../application/ports.ts';
 import type { AppServices } from './services.ts';
 
 /** A replay that is only good enough to be passed along: the fakes never look inside it. */

@@ -18,11 +18,11 @@ const SCORING: ReadonlyArray<readonly [target: string, points: number]> = [
 ];
 
 const CONTROLS: ReadonlyArray<readonly [keys: string[], action: string]> = [
-  [['←', '→'], 'Steer'],
-  [['↑'], 'Fly faster'],
-  [['↓'], 'Slow down'],
-  [['Space'], 'Fire (hold for rapid fire)'],
-  [['P'], 'Pause'],
+  [['←', '→'], 'Steer (or A and D)'],
+  [['↑'], 'Fly faster (or W)'],
+  [['↓'], 'Slow down (or S)'],
+  [['Space'], 'Fire (or Z, X; hold for rapid fire)'],
+  [['P'], 'Pause (or Esc)'],
   [['M'], 'Mute'],
 ];
 

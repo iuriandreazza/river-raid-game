@@ -76,6 +76,26 @@ describe('title screen', () => {
     expect(screen.queryByRole('img', { name: /game screen/i })).toBeNull();
   });
 
+  it('starts a run with Space too', () => {
+    const { services, games } = createFakeServices();
+    render(<App services={services} />);
+
+    press('Space');
+
+    expect(games).toHaveLength(1);
+  });
+
+  it('ignores a key that is only repeating because it is being held down', () => {
+    const { services, games } = createFakeServices();
+    render(<App services={services} />);
+
+    act(() => {
+      fireEvent.keyDown(window, { code: 'Enter', repeat: true });
+    });
+
+    expect(games).toHaveLength(0);
+  });
+
   it('starts a run with Enter and registers it with the leaderboard', async () => {
     const { games, leaderboard } = startGame();
     expect(games).toHaveLength(1);
@@ -97,6 +117,37 @@ describe('game screen', () => {
     expect(games[0]!.resume).toHaveBeenCalled();
   });
 
+  it('pauses with Escape too', () => {
+    const { games } = startGame();
+    press('Escape');
+    expect(screen.getByText('Paused')).toBeTruthy();
+    expect(games[0]!.pause).toHaveBeenCalled();
+  });
+
+  it('resumes from the Resume button', () => {
+    const { games } = startGame();
+    press('KeyP');
+
+    fireEvent.click(screen.getByRole('button', { name: /resume/i }));
+
+    expect(screen.queryByText('Paused')).toBeNull();
+    expect(games[0]!.resume).toHaveBeenCalled();
+  });
+
+  it('pauses when the page is hidden', () => {
+    const { games } = startGame();
+    Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
+    try {
+      act(() => {
+        document.dispatchEvent(new Event('visibilitychange'));
+      });
+    } finally {
+      Reflect.deleteProperty(document, 'hidden');
+    }
+    expect(screen.getByText('Paused')).toBeTruthy();
+    expect(games[0]!.pause).toHaveBeenCalled();
+  });
+
   it('pauses when the window loses focus', () => {
     const { games } = startGame();
     act(() => {
@@ -110,6 +161,16 @@ describe('game screen', () => {
     const { games, preferences } = startGame();
 
     press('KeyM');
+
+    expect(games[0]!.setMuted).toHaveBeenLastCalledWith(true);
+    expect(preferences.saveMuted).toHaveBeenLastCalledWith(true);
+    expect(screen.getByRole('button', { name: /sound off/i })).toBeTruthy();
+  });
+
+  it('mutes from the sound button as well', () => {
+    const { games, preferences } = startGame();
+
+    fireEvent.click(screen.getByRole('button', { name: /sound on/i }));
 
     expect(games[0]!.setMuted).toHaveBeenLastCalledWith(true);
     expect(preferences.saveMuted).toHaveBeenLastCalledWith(true);
@@ -182,6 +243,54 @@ describe('game over', () => {
     expect((screen.getByRole('button', { name: /save score/i }) as HTMLButtonElement).disabled).toBe(true);
   });
 
+  it('does not let the player save initials that the board refuses', async () => {
+    const setup = startGame();
+    await finishGame(setup, 100);
+    const input = await screen.findByLabelText(/enter your initials/i);
+    const save = screen.getByRole('button', { name: /save score/i }) as HTMLButtonElement;
+
+    fireEvent.change(input, { target: { value: 'f4g' } });
+    expect(save.disabled).toBe(true);
+    expect(screen.getByText(/not allowed/i)).toBeTruthy();
+
+    fireEvent.change(input, { target: { value: 'f00' } });
+    expect(save.disabled).toBe(false);
+    expect(screen.queryByText(/not allowed/i)).toBeNull();
+  });
+
+  it('does not limit the length in the browser, which would cut a pasted text before it is cleaned', async () => {
+    const setup = startGame();
+    await finishGame(setup, 100);
+    expect((await screen.findByLabelText(/enter your initials/i)).hasAttribute('maxlength')).toBe(false);
+  });
+
+  it('forgets why a save failed once the initials are edited', async () => {
+    const setup = startGame();
+    setup.leaderboard.submitScore.mockRejectedValueOnce(new LeaderboardError('initials_not_allowed', 'server wording'));
+    await finishGame(setup, 900);
+    const input = await screen.findByLabelText(/enter your initials/i);
+    fireEvent.change(input, { target: { value: 'ABC' } });
+    fireEvent.click(screen.getByRole('button', { name: /save score/i }));
+    expect(await screen.findByRole('alert')).toBeTruthy();
+
+    fireEvent.change(input, { target: { value: 'ABD' } });
+
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('keeps the exits closed while the score is on its way', async () => {
+    const setup = startGame();
+    setup.leaderboard.submitScore.mockImplementationOnce(() => new Promise(() => undefined));
+    await finishGame(setup, 900);
+    fireEvent.change(await screen.findByLabelText(/enter your initials/i), { target: { value: 'ABC' } });
+
+    fireEvent.click(screen.getByRole('button', { name: /save score/i }));
+
+    expect(((await screen.findByRole('button', { name: /saving/i })) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole('button', { name: /play again/i }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole('button', { name: /title screen/i }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
   it('keeps the form and explains what went wrong when saving fails', async () => {
     const setup = startGame();
     setup.leaderboard.submitScore.mockRejectedValueOnce(new LeaderboardError('network', 'down'));
@@ -198,6 +307,9 @@ describe('game over', () => {
   });
 
   it.each([
+    ['session_already_used', /already saved/i],
+    ['duplicate_replay', /already saved/i],
+    ['implausible_score', /could not verify/i],
     ['unknown_session', /expired/i],
     ['invalid_replay', /could not verify/i],
     ['score_mismatch', /could not verify/i],
@@ -222,7 +334,7 @@ describe('game over', () => {
     startGame(setup);
     await finishGame(setup, 700);
 
-    expect(await screen.findByText(/leaderboard is offline/i)).toBeTruthy();
+    expect(await screen.findByText(/leaderboard is unavailable/i)).toBeTruthy();
     expect(screen.queryByLabelText(/enter your initials/i)).toBeNull();
   });
 

@@ -2,14 +2,14 @@ import { useEffect, useState } from 'react';
 import { DEFAULT_PAGE_SIZE, type LeaderboardEntry } from '../../shared/leaderboard-contract.ts';
 import { LeaderboardError, type LeaderboardPort } from '../application/ports.ts';
 
-export type TopScores =
+type TopScores =
   | { status: 'loading' }
   | { status: 'ready'; entries: LeaderboardEntry[] }
   | { status: 'error'; message: string };
 
 type Settled = Exclude<TopScores, { status: 'loading' }>;
 
-export function describeLeaderboardError(error: unknown): string {
+function describeLeaderboardError(error: unknown): string {
   if (error instanceof LeaderboardError && error.code === 'network') return 'The leaderboard is offline right now.';
   return 'The leaderboard could not be loaded.';
 }
