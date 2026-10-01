@@ -4,6 +4,7 @@
   "private": true,
   "description": "A browser tribute to the Atari 2600 classic River Raid, with a global leaderboard.",
   "type": "module",
+  "packageManager": "pnpm@11.24.0",
   "engines": {
     "node": ">=24"
   },
