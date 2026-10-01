@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { describe, expect, it } from 'vitest';
-import { createClientAddressResolver } from './client-address.ts';
+import { createClientAddressResolver, networkOf } from './client-address.ts';
 
 interface Call {
   readonly trustProxy: number;
@@ -81,5 +81,28 @@ describe('createClientAddressResolver', () => {
     ])('falls back to the socket when the header %s', async (_why, trustProxy, forwardedFor) => {
       expect(await resolve({ trustProxy, forwardedFor, socket: '198.51.100.9' })).toBe('198.51.100.9');
     });
+  });
+});
+
+describe('networkOf', () => {
+  it.each([
+    ['an IPv4 address', '203.0.113.5', '203.0.113.5'],
+    ['an IPv6 address, by its first 64 bits', '2001:db8:1:2:3:4:5:6', '2001:db8:1:2::/64'],
+    ['a compressed IPv6 address', '2001:db8::1', '2001:db8:0:0::/64'],
+    ['a compressed IPv6 address that ends in the network', '2001:db8:1:2::', '2001:db8:1:2::/64'],
+    ['leading zeros, which are not part of the number', '2001:0db8:0001:0002:0000:0000:0000:0001', '2001:db8:1:2::/64'],
+    ['upper case, which is not part of the number', '2001:DB8:1:2::1', '2001:db8:1:2::/64'],
+    ['the loopback address', '::1', '0:0:0:0::/64'],
+    ['a zone, which says nothing about who is calling', 'fe80::1%eth0', 'fe80:0:0:0::/64'],
+    ['an IPv4 address in IPv6 form, dotted', '::ffff:203.0.113.5', '203.0.113.5'],
+    ['an IPv4 address in IPv6 form, in hexadecimal', '::ffff:cb00:7105', '203.0.113.5'],
+    ['an address in a network that merely resembles the IPv4-mapped one', '64:ff9b::203.0.113.5', '64:ff9b:0:0::/64'],
+  ])('reads %s', (_name, address, expected) => {
+    expect(networkOf(address)).toBe(expected);
+  });
+
+  it('leaves alone what is not an address, and what is not there', () => {
+    expect(networkOf(undefined)).toBeUndefined();
+    expect(networkOf('client')).toBe('client');
   });
 });

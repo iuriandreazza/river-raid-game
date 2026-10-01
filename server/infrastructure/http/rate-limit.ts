@@ -1,5 +1,6 @@
 import type { Context, MiddlewareHandler } from 'hono';
 import type { Clock } from '../../application/ports.ts';
+import { networkOf } from './client-address.ts';
 import { jsonError } from './error-responses.ts';
 
 /** Past this many tracked clients, windows that have ended are swept out before another client is added. */
@@ -103,7 +104,7 @@ export interface RateLimitOptions extends FixedWindowOptions {
 export function rateLimit({ clientAddress, onLimited, ...window }: RateLimitOptions): MiddlewareHandler {
   const counter = new FixedWindowCounter(window);
   return async (c, next) => {
-    const verdict = counter.hit(clientAddress(c) ?? UNKNOWN_CLIENT);
+    const verdict = counter.hit(networkOf(clientAddress(c)) ?? UNKNOWN_CLIENT);
     if (!verdict.limited) {
       await next();
       return;

@@ -206,6 +206,24 @@ describe('rateLimit', () => {
     expect((await as('b')).status).toBe(200);
   });
 
+  it('counts the addresses of one IPv6 network as one client, and other networks apart', async () => {
+    const { app } = appLimitedTo(1, (c) => c.req.header('x-test-client'));
+    const as = (client: string) => app.request('/limited', { headers: { 'x-test-client': client } });
+    await as('2001:db8:1:2:aaaa::1');
+
+    expect((await as('2001:db8:1:2:bbbb:cccc:dddd:eeee')).status).toBe(429);
+    expect((await as('2001:db8:1:3::1')).status).toBe(200);
+  });
+
+  it('counts an IPv4 client of a dual-stack socket by its IPv4 address', async () => {
+    const { app } = appLimitedTo(1, (c) => c.req.header('x-test-client'));
+    const as = (client: string) => app.request('/limited', { headers: { 'x-test-client': client } });
+    await as('::ffff:203.0.113.5');
+
+    expect((await as('203.0.113.5')).status).toBe(429);
+    expect((await as('::ffff:203.0.113.6')).status).toBe(200);
+  });
+
   it('gives callers whose address cannot be told one allowance between them', async () => {
     const { app } = appLimitedTo(1, () => undefined);
     await app.request('/limited');
