@@ -87,7 +87,8 @@ export function TitleScreen({ services, onStart, onReviewAnalytics }: TitleScree
             Analytics settings
           </button>
         </p>
-        <ul className="credits">
+        {/* Safari drops the list semantics of a list without bullets unless the role says so. */}
+        <ul className="credits" role="list">
           {CREDITS.map(({ name, href, icon }) => (
             <li key={href}>
               <a href={href} target="_blank" rel="noopener">

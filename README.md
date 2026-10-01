@@ -95,7 +95,7 @@ Every push to `main` is verified by [GitHub Actions](.github/workflows/ci.yml), 
 
 The tags that make a shared link look good (Open Graph and the X card) are in [`index.html`](index.html), and the 1200×630 picture they point to is [`public/og-image.png`](public/og-image.png). Crawlers do not run scripts and only follow absolute URLs, so the address of the site is written out in three places there: the canonical link, `og:url` and `og:image`. Change all three when the site gets another address, and ask Facebook's Sharing Debugger or LinkedIn's Post Inspector to fetch the page again, since they keep the old preview.
 
-The credits at the foot of the title screen use the icons in [`public/credits`](public/credits). They are copies on purpose: the content security policy only lets the page load images from its own origin.
+The credits at the foot of the title screen use the icons in [`public/credits`](public/credits). They are served by the site itself, not loaded from the linked sites, because the content security policy lets the page load images only from itself and the Google Analytics hosts.
 
 ### API
 
