@@ -30,9 +30,9 @@ push to main ─▶ GitHub Actions ─▶ verify ─▶ image (amd64 + arm64) �
 - [`zs.toml`](../zs.toml) pins the `zs` profile of the project to `iuripersonal`, so a deploy from this folder never runs as another account of the same machine.
 - [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) has four jobs:
   1. **verify**, on every pull request and push: lint, tests, build (which type-checks) and `pnpm audit` for high and critical advisories;
-  2. **container**, on every pull request and push: builds the image and runs it as the platform will, with a fresh volume on `/data`: the health check answers, the page is served, starting a session writes to the database, the moderation command runs inside the image and the process is not root;
+  2. **container**, on every pull request and push: builds the image and runs it as the platform will, read-only and without capabilities, with a fresh volume on `/data`: the health check answers and reports the commit the image was built from, the page is served, starting a session writes to the database, the moderation command runs inside the image and the process is not root;
   3. **image**, on a push to `main`, after the two above: builds the image for both architectures (the community nodes are a mix of amd64 and arm64) and publishes it as `sha-<commit>` and `latest`;
-  4. **deploy**, on a push to `main`, only when the repository variable `DEPLOY_ENABLED` is `true`: installs the `zs` release recorded in the workflow after checking its SHA-256, logs in with the API key, points the manifest at the new image, runs `zs deploy` and checks `/api/health`.
+  4. **deploy**, on a push to `main`, only when the repository variable `DEPLOY_ENABLED` is `true`: installs the `zs` release recorded in the workflow after checking its SHA-256, logs in with the API key, points the manifest at the new image and runs `zs deploy`. The verdict is not what `zs` prints (see *Quirks of the platform* below) but what the app says: the job waits until `/api/health` at `APP_URL` reports the commit it deployed, and fails after four minutes if it does not.
 - Actions are pinned by commit, the workflow asks for read access only (the image job also writes packages), and pull requests never see a secret.
 
 ## One-time setup
@@ -55,12 +55,14 @@ push to main ─▶ GitHub Actions ─▶ verify ─▶ image (amd64 + arm64) �
    gh variable set APP_URL --body https://app-xxxx.apps.zeroserver.cc --repo iuriandreazza/river-raid-game
    gh variable set DEPLOY_ENABLED --body true --repo iuriandreazza/river-raid-game
    ```
-6. **Check which address the server sees**, because the rate limit depends on it. `TRUST_PROXY` in `zs.yaml` says how many proxies stand in front of the container and append to `X-Forwarded-For`. Redeploy once with `LOG_CLIENT_ADDRESS=true`, send a request that is refused and read the log:
+6. **Check which address the server sees**, because the rate limit depends on it. `TRUST_PROXY` in `zs.yaml` says how many proxies stand in front of the container and append to `X-Forwarded-For`. Redeploy with `LOG_CLIENT_ADDRESS=true`, send a request that is refused (once with a forged `X-Forwarded-For`) and read the log:
    ```bash
    curl -s -X POST -H 'content-type: text/plain' -d x "$APP_URL/api/sessions"      # 415, logged
-   zs --profile iuripersonal logs <instance-id> | tail -3
+   zs --profile iuripersonal logs <instance-id> | tail -3                          # the log arrives some seconds later
    ```
    The `client` field has to be your own public address. If it is the address of a proxy, or `unknown`, every player shares one allowance and the value of `TRUST_PROXY` is wrong. Turn `LOG_CLIENT_ADDRESS` off again afterwards: the log is better without addresses.
+
+   **Measured on the live app (2026-10-01): `TRUST_PROXY=2`.** The path is Caddy (the gateway's edge), then the FRP vhost, then the container, and each of the two appends to `X-Forwarded-For`. With `1` the log showed the Docker address of the gateway side (`172.18.0.3`) for everybody, which would have put every player in one rate-limit bucket. With `2` it showed the real client address, and an `X-Forwarded-For` forged by the client changed nothing, because Caddy replaces it.
 
 ## Day to day
 
@@ -74,6 +76,15 @@ push to main ─▶ GitHub Actions ─▶ verify ─▶ image (amd64 + arm64) �
 | Volumes and snapshots | `zs --profile iuripersonal volume ls <application-id>`; `volume restore <application-id>` queues a restore from the latest snapshot |
 | Moderate the board | on the machine that runs the container: `docker exec <container> node dist-server/server/cli.js list` (the CLI of `zs` has no `exec`) |
 | Update `zs` in the workflow | take the new release, put its `zs-linux-x64.sha256` in `ZS_SHA256` and its tag in `ZS_VERSION` |
+
+## Quirks of the platform
+
+Found by deploying for real (zs 0.14.0, 2026-10-01). They are the platform's and are not fixed here; the pipeline is built around them.
+
+- **A redeploy of an app with a named volume is reported as failed, although it works.** Every `zs deploy` after the first swaps the container and applies the new image and environment (the instance stays `RUNNING` and answers), and then two `FAILED` records follow with `(HTTP code 400) bad parameter - Duplicate mount point: /data`. The backend's rollback path (`buildRollbackServicePayload` in `ReconcileCommandResult`) sends the named volume both as a managed mount and as a raw bind, without the de-duplication that the start path (`buildServiceStartPayload` in `OrchestratorService`) has. `zs logs` returns that error text instead of the log for a few seconds after a deploy.
+- **`zs deploy` exits with 0 when the deployment failed**; it only prints it. A script cannot rely on the exit code.
+- So the workflow does not trust `zs`: the image carries its commit (`APP_REVISION`, set from the `REVISION` build argument), `/api/health` reports it, and the deploy job waits for the commit it deployed. If the platform one day stops adding the failed records, nothing changes.
+- The security log reaches `zs logs` some seconds after the event.
 
 ## What to expect
 

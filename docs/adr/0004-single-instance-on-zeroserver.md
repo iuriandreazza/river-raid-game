@@ -34,7 +34,8 @@ SQLite cannot simply be shared by instances on different nodes, whatever the vol
 - If the node that runs the app is lost, the board comes back from the latest snapshot on another node: the scores of the minutes since that snapshot are lost. The snapshot is taken with the volume quiesced, so the file is consistent.
 - There is no redundancy: while the node is down, or while the app is rescheduled, the board is unavailable.
 - There is no `exec` in the `zs` CLI, so the moderation command runs on the machine that hosts the container (`docker exec`), which the author operates. Exposing it over HTTP would add an administrative surface this project does not want.
-- The rate limiter keys its counters by the address the gateway forwards. `TRUST_PROXY` has to match the number of proxies that append to `X-Forwarded-For` in front of the container; the deploy guide says how to check it.
+- The rate limiter keys its counters by the address the gateway forwards. `TRUST_PROXY` has to match the number of proxies that append to `X-Forwarded-For` in front of the container: measured on the live app, it is 2 (Caddy and the FRP vhost).
+- The platform reports every redeploy of an app with a volume as failed although it applies it, and `zs deploy` exits 0 whatever happens. The deploy job therefore proves the deploy by asking the app which commit it runs (`/api/health`).
 
 ## Alternatives considered
 

@@ -94,7 +94,7 @@ Every push to `main` is verified by [GitHub Actions](.github/workflows/ci.yml), 
 | `POST /api/sessions` | Registers the start of a run. Returns `201 { sessionId }` |
 | `POST /api/scores` | Body `{ sessionId, initials, score, engineVersion, replay }`, as JSON, at most 512 KiB. Returns `201 { entry }` with the rank |
 | `GET /api/scores?limit=10` | The best scores, highest first (`limit` from 1 to 100) |
-| `GET /api/health` | `200 { status: "ok" }` |
+| `GET /api/health` | `200 { status: "ok", revision? }`, where `revision` is the commit the image was built from |
 
 Errors come as `{ error: { code, message } }`. The wire format lives in [`shared/leaderboard-contract.ts`](shared/leaderboard-contract.ts).
 
