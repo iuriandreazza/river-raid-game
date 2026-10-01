@@ -21,6 +21,9 @@ the integrity and availability of that board:
 - bypassing the rate limits or the one-score-per-session rule;
 - leaking internal information through errors, headers or logs.
 
+How the board is protected, and what is known to be out of reach, is written down in
+[docs/security.md](docs/security.md) and [ADR 0003](docs/adr/0003-replay-verified-scores.md).
+
 Out of scope: automation that plays the game legitimately well (a bot that really flies the river), missing
 rate limits on a deployment that sits behind your own proxy, and findings in dependencies that already have
 a fix in a newer release.
