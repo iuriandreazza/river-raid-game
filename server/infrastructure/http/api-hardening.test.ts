@@ -40,6 +40,7 @@ describe('rate limiting', () => {
     ['POST', '/api/sessions', 30],
     ['POST', '/api/scores', 20],
     ['GET', '/api/scores', 120],
+    ['GET', '/api/nothing', 120],
   ])('allows %s %s %i times a minute per client and refuses the next', async (method, path, allowed) => {
     const { app } = createWorld();
 

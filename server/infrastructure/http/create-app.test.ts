@@ -541,7 +541,7 @@ describe('security headers', () => {
       const { headers } = await app.request(path);
 
       expect(headers.get('x-content-type-options')).toBe('nosniff');
-      expect(headers.get('x-frame-options')).toBe('SAMEORIGIN');
+      expect(headers.get('x-frame-options')).toBe('DENY');
       expect(headers.get('content-security-policy')).toContain("default-src 'none'");
       expect(headers.get('content-security-policy')).toContain("script-src 'self'");
       expect(headers.get('content-security-policy')).toContain("frame-ancestors 'none'");

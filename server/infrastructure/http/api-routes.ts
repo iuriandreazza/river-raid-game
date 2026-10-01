@@ -104,7 +104,10 @@ export function createApiRoutes(service: LeaderboardService, security: ResolvedS
   });
 
   // Registered last so unknown API routes never fall through to the single-page app.
-  api.all('*', guards.sizeLimit(MAX_STRAY_BODY_BYTES), (c) => jsonError(c, 404, 'invalid_request', 'Unknown API route.'));
+  // Limited like a read: without it every oversized request to a made-up route would write a line to the log.
+  api.all('*', guards.limit(rateLimits.topScores), guards.sizeLimit(MAX_STRAY_BODY_BYTES), (c) =>
+    jsonError(c, 404, 'invalid_request', 'Unknown API route.'),
+  );
 
   return api;
 }
