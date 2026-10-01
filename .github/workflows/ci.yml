@@ -56,11 +56,14 @@ jobs:
           load: true
           tags: river-raid:ci
           cache-from: type=gha
-      # What the platform will do with the image: run it with a fresh volume on /data and talk to it.
+      # What the platform will do with the image: run it with a fresh volume on /data and talk to it. The hardening
+      # flags are the ones the README recommends, so that they are known to work.
       - name: Run the image with a fresh volume and use it
         run: |
-          docker run --detach --name app --publish 8080:8080 --volume river-raid-data:/data river-raid:ci
-          curl --fail --silent --show-error --retry 30 --retry-delay 1 --retry-connrefused http://localhost:8080/api/health
+          docker run --detach --name app --publish 8080:8080 --volume river-raid-data:/data \
+            --read-only --tmpfs /tmp --cap-drop ALL --security-opt no-new-privileges river-raid:ci
+          curl --fail --silent --show-error --retry 30 --retry-delay 1 --retry-connrefused --retry-all-errors \
+            http://localhost:8080/api/health
           curl --fail --silent --show-error http://localhost:8080/ > /dev/null
           # Starting a session writes to the database on the volume.
           curl --fail --silent --show-error --request POST http://localhost:8080/api/sessions
