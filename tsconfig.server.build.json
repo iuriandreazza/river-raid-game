@@ -9,5 +9,5 @@
     "tsBuildInfoFile": null
   },
   "include": ["server", "shared"],
-  "exclude": ["**/*.test.ts"]
+  "exclude": ["**/*.test.ts", "server/testing/**"]
 }

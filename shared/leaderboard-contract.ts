@@ -34,9 +34,11 @@ export interface TopScoresResponse {
 
 export type ApiErrorCode =
   | 'invalid_request'
+  | 'payload_too_large'
   | 'unknown_session'
   | 'session_already_used'
-  | 'implausible_score';
+  | 'implausible_score'
+  | 'internal_error';
 
 export interface ApiErrorResponse {
   error: { code: ApiErrorCode; message: string };
