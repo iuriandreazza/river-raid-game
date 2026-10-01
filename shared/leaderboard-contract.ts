@@ -3,9 +3,6 @@
 export const DEFAULT_PAGE_SIZE = 10;
 export const MAX_PAGE_SIZE = 100;
 
-/** The in-game score display has six digits, so nothing above this can be earned. */
-export const MAX_SCORE = 999_999;
-
 export interface LeaderboardEntry {
   rank: number;
   initials: string;

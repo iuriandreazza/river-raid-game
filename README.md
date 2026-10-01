@@ -81,7 +81,11 @@ docker run -p 8080:8080 -v river-raid-data:/data \
   --read-only --tmpfs /tmp --cap-drop ALL --security-opt no-new-privileges river-raid
 ```
 
-These flags are the recommended hardening; the image itself has not been exercised by the project's automated checks. Run one instance per database: the rate limiter lives in memory and SQLite has a single writer.
+These flags are the recommended hardening, and the CI builds the image and runs it with exactly them on a fresh volume. Run one instance per database: the rate limiter lives in memory and SQLite has a single writer.
+
+### Deploying
+
+Every push to `main` is verified by [GitHub Actions](.github/workflows/ci.yml), built as a multi-architecture image and, once switched on, deployed with the `zs` CLI to the [ZeroServer Community Cloud](https://zeroserver.cc) as a single instance, with its SQLite file on a persistent volume. [`docs/deploy.md`](docs/deploy.md) has the setup, the day-to-day commands and what to expect from one instance; [ADR 0004](docs/adr/0004-single-instance-on-zeroserver.md) says why it is not several.
 
 ### API
 

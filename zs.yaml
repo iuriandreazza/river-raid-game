@@ -1,0 +1,21 @@
+# Manifest of the app on the ZeroServer Community Cloud (reference: docs/deploy.md).
+# One service, one instance: the platform runs a single instance per app, and the leaderboard is a SQLite file on a
+# named volume. The deploy workflow swaps `:latest` for the tag of the commit it deploys.
+app: river-raid
+
+placement:
+  country: BR
+
+services:
+  - name: web
+    image: ghcr.io/iuriandreazza/river-raid-game:latest
+    env:
+      # The platform's gateway stands in front of the container, and the rate limit tells players apart by the
+      # address it forwards. See docs/deploy.md before changing this.
+      - TRUST_PROXY=1
+    ports:
+      - "8080"
+    volumes:
+      # The leaderboard (SQLite). Persistent and snapshotted by the platform, but pinned to one node and not replicated.
+      - leaderboard:/data
+    exposed: true
