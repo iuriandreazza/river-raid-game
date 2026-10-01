@@ -10,8 +10,9 @@ import {
   replayTicks,
   verifyReplay,
 } from './replay.ts';
-import { GOLDEN_RUNS, GOLDEN_RUNS_ENGINE_VERSION } from './testing/golden-runs.ts';
+import { GOLDEN_RUNS, GOLDEN_RUNS_ENGINE_VERSION, GOLDEN_WORLD_DIGEST } from './testing/golden-runs.ts';
 import { cautiousPilot, noisyPolicy, recordRun } from './testing/pilot.ts';
+import { GOLDEN_WORLD_SECTIONS, worldDigest } from './testing/world-digest.ts';
 import { NO_INPUT, type Input } from './types.ts';
 
 const input = (overrides: Partial<Input>): Input => ({ ...NO_INPUT, ...overrides });
@@ -128,6 +129,13 @@ describe('verifyReplay', () => {
 describe('golden runs', () => {
   it('were recorded with the current engine version', () => {
     expect(GOLDEN_RUNS_ENGINE_VERSION, 'ENGINE_VERSION changed: run `pnpm record-golden-runs`').toBe(ENGINE_VERSION);
+  });
+
+  it(`still build the same ${GOLDEN_WORLD_SECTIONS} sections of river, which the runs do not reach`, async () => {
+    expect(
+      await worldDigest(),
+      'The river generator changed what the world looks like. If that is intended, bump ENGINE_VERSION in replay.ts and run `pnpm record-golden-runs`.',
+    ).toBe(GOLDEN_WORLD_DIGEST);
   });
 
   it.each(GOLDEN_RUNS)('are recordings the API accepts: "$name"', ({ replay }) => {
