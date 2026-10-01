@@ -540,6 +540,18 @@ describe('static hosting', () => {
     expect(await response.text()).not.toContain(SECRET);
   });
 
+  it.each(['/', '/assets/app.js', '/api/health', '/missing.css'])('sends security headers with %s', async (path) => {
+    const { app } = setup({ staticDir: siteDir });
+
+    const { headers } = await app.request(path);
+
+    expect(headers.get('x-content-type-options')).toBe('nosniff');
+    expect(headers.get('x-frame-options')).toBe('SAMEORIGIN');
+    expect(headers.get('content-security-policy')).toContain("default-src 'none'");
+    expect(headers.get('content-security-policy')).toContain("script-src 'self'");
+    expect(headers.get('content-security-policy')).toContain("frame-ancestors 'none'");
+  });
+
   it('keeps the API working alongside the site', async () => {
     const { app } = setup({ staticDir: siteDir });
 

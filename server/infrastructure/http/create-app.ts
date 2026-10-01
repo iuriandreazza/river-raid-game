@@ -1,5 +1,6 @@
 import { serveStatic } from '@hono/node-server/serve-static';
 import { Hono, type MiddlewareHandler } from 'hono';
+import { secureHeaders } from 'hono/secure-headers';
 import { relative, resolve } from 'node:path';
 import type { LeaderboardService } from '../../application/leaderboard-service.ts';
 import { createApiRoutes } from './api-routes.ts';
@@ -14,8 +15,21 @@ export interface AppOptions {
 const FINGERPRINTED_PREFIX = '/assets/';
 const ONE_YEAR_SECONDS = 365 * 24 * 60 * 60;
 
+/** The built client runs its own script and style files and only talks to this server. */
+const CONTENT_SECURITY_POLICY = {
+  defaultSrc: ["'none'"],
+  scriptSrc: ["'self'"],
+  styleSrc: ["'self'"],
+  imgSrc: ["'self'"],
+  connectSrc: ["'self'"],
+  baseUri: ["'none'"],
+  formAction: ["'self'"],
+  frameAncestors: ["'none'"],
+};
+
 export function createApp({ service, staticDir }: AppOptions): Hono {
   const app = new Hono();
+  app.use('*', secureHeaders({ contentSecurityPolicy: CONTENT_SECURITY_POLICY }));
   app.route('/api', createApiRoutes(service));
   if (staticDir !== undefined) {
     serveSinglePageApp(app, staticDir);
