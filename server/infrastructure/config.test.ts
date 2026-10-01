@@ -12,6 +12,7 @@ describe('loadConfig', () => {
       staticDir: undefined,
       trustProxy: 0,
       logClientAddress: false,
+      revision: undefined,
     });
   });
 
@@ -27,6 +28,7 @@ describe('loadConfig', () => {
         STATIC_DIR: 'public',
         TRUST_PROXY: '2',
         LOG_CLIENT_ADDRESS: 'true',
+        APP_REVISION: '9052bb9a1c3e4d5f60718293a4b5c6d7e8f90123',
       },
       (path) => path === 'public',
     );
@@ -37,6 +39,7 @@ describe('loadConfig', () => {
       staticDir: 'public',
       trustProxy: 2,
       logClientAddress: true,
+      revision: '9052bb9a1c3e4d5f60718293a4b5c6d7e8f90123',
     });
   });
 
@@ -46,7 +49,7 @@ describe('loadConfig', () => {
 
   it('treats blank variables as unset', () => {
     const config = loadConfig(
-      { PORT: '', DATABASE_PATH: '  ', STATIC_DIR: '', TRUST_PROXY: ' ', LOG_CLIENT_ADDRESS: '' },
+      { PORT: '', DATABASE_PATH: '  ', STATIC_DIR: '', TRUST_PROXY: ' ', LOG_CLIENT_ADDRESS: '', APP_REVISION: '' },
       onlyDist,
     );
 
@@ -56,6 +59,7 @@ describe('loadConfig', () => {
       staticDir: 'dist',
       trustProxy: 0,
       logClientAddress: false,
+      revision: undefined,
     });
   });
 
@@ -82,6 +86,19 @@ describe('loadConfig', () => {
     it.each([['-1'], ['1.5'], ['abc'], ['true'], ['100'], ['0x1'], ['1 2'], ['+1']])('rejects %s', (value) => {
       expect(() => loadConfig({ TRUST_PROXY: value }, noDirectories)).toThrow(/TRUST_PROXY/);
     });
+  });
+
+  describe('APP_REVISION', () => {
+    it.each([['9052bb9'], ['9052bb9a1c3e4d5f60718293a4b5c6d7e8f90123']])('accepts the commit %s', (value) => {
+      expect(loadConfig({ APP_REVISION: value }, noDirectories).revision).toBe(value);
+    });
+
+    it.each([['9052BB9'], ['main'], ['9052bb'], ['sha-9052bb9'], ['9052bb9 '.repeat(2)], ['x'.repeat(65)]])(
+      'rejects %j',
+      (value) => {
+        expect(() => loadConfig({ APP_REVISION: value }, noDirectories)).toThrow(/APP_REVISION/);
+      },
+    );
   });
 
   describe('LOG_CLIENT_ADDRESS', () => {

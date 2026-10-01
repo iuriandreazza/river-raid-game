@@ -27,12 +27,13 @@ export interface WorldOptions {
   readonly staticDir?: string;
   readonly security?: SecuritySettings;
   readonly limits?: StorageLimits;
+  readonly revision?: string;
 }
 
-export function createWorld({ staticDir, security, limits }: WorldOptions = {}): World {
+export function createWorld({ staticDir, security, limits, revision }: WorldOptions = {}): World {
   const { service, store, clock, verifier } = createTestService(limits);
   // The limiter shares the clock of the service, so that advancing it moves the rate-limit windows too.
-  const app = createApp({ service, staticDir, security: { clock, ...security } });
+  const app = createApp({ service, staticDir, security: { clock, ...security }, revision });
   return { app, clock, verifier, store };
 }
 

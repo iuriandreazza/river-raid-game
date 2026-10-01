@@ -119,7 +119,7 @@ Levels 1 and 2 where they apply to a public, anonymous service, plus a few level
 | 11.5.1 | L2 | CSPRNG, 128 bits | Met | `session-id.ts`. |
 | 13.4.1 | L1 | No version control metadata served | Met | Only `dist/` is served; the image has no `.git`. |
 | 13.4.2, 13.4.3, 13.4.4, 13.4.5 | L2 | No debug mode, listings, `TRACE`, stray endpoints | Met | One public non-API endpoint: `/api/health`. |
-| 13.4.6, 13.4.7 | L3 | No version header, only safe file types | Met | Checked on the live server. |
+| 13.4.6, 13.4.7 | L3 | No version header, only safe file types | Met | Checked on the live server. The health check reports the commit of the app (a public repository) and no component versions. |
 | 14.2.1 | L1 | No sensitive data in URLs | Met | Only `limit`. |
 | 14.3.3 | L2 | Browser storage | Met | `localStorage` keeps the initials and the mute setting. |
 | 15.1.1, 15.2.1 | L1 | Remediation timeframes for components | Met | Dependabot weekly, `SECURITY.md`. |
