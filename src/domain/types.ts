@@ -47,7 +47,7 @@ export interface Explosion {
   kind: ExplosionKind;
   /** Horizontal center, in columns. */
   x: number;
-  /** Lowest world row. */
+  /** World row of the vertical center. */
   y: number;
   age: number;
 }

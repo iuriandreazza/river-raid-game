@@ -69,9 +69,9 @@ export type ObjectKind = EnemyKind | 'fuel';
 
 export const OBJECT_SIZES: Record<ObjectKind, { width: number; height: number }> = {
   tanker: { width: 14, height: 7 },
-  helicopter: { width: 9, height: 10 },
+  helicopter: { width: 8, height: 10 },
   jet: { width: 9, height: 6 },
-  fuel: { width: 8, height: 24 },
+  fuel: { width: 9, height: 24 },
 };
 
 /** A jet starts its pass when it is this many rows ahead of the player's nose. */

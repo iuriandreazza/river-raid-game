@@ -172,7 +172,7 @@ function loseJet(state: GameState, cause: CrashCause, events: GameEvent[]): void
   state.deathTicksLeft = DEATH_TICKS;
   state.missile = null;
   state.refueling = false;
-  addExplosion(state, 'plane', state.playerX + PLAYER_WIDTH / 2, noseRowOf(state.scroll) - PLAYER_HEIGHT + 1);
+  addExplosion(state, 'plane', state.playerX + PLAYER_WIDTH / 2, noseRowOf(state.scroll) - PLAYER_HEIGHT / 2);
   events.push({ type: 'jetLost', cause });
 }
 
@@ -244,7 +244,7 @@ function destroy(state: GameState, target: Target, events: GameEvent[]): void {
     case 'enemy': {
       const { enemy } = target;
       state.enemies = state.enemies.filter((other) => other !== enemy);
-      addExplosion(state, 'small', enemy.x + enemy.width / 2, enemy.y);
+      addExplosion(state, 'small', enemy.x + enemy.width / 2, enemy.y + enemy.height / 2);
       events.push({ type: 'objectDestroyed', kind: enemy.kind, points: POINTS[enemy.kind] });
       award(state, POINTS[enemy.kind], events);
       return;
@@ -252,7 +252,7 @@ function destroy(state: GameState, target: Target, events: GameEvent[]): void {
     case 'depot': {
       const { depot } = target;
       state.depots = state.depots.filter((other) => other !== depot);
-      addExplosion(state, 'small', depot.x + depot.width / 2, depot.y);
+      addExplosion(state, 'small', depot.x + depot.width / 2, depot.y + depot.height / 2);
       events.push({ type: 'objectDestroyed', kind: 'fuel', points: POINTS.fuel });
       award(state, POINTS.fuel, events);
       return;
@@ -261,7 +261,7 @@ function destroy(state: GameState, target: Target, events: GameEvent[]): void {
       const bottom = state.world.bridgeBottom(target.section);
       const water = state.world.rowAt(bottom);
       state.destroyedBridges.add(target.section);
-      addExplosion(state, 'bridge', (water.left + water.right) / 2, bottom);
+      addExplosion(state, 'bridge', (water.left + water.right) / 2, bottom + BRIDGE_HEIGHT / 2);
       events.push({ type: 'bridgeDestroyed' });
       award(state, POINTS.bridge, events);
       return;
