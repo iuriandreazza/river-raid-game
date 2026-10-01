@@ -46,6 +46,32 @@ describe('title screen', () => {
     expect(screen.getByText(/spare jet for every 10,000 points/i)).toBeTruthy();
   });
 
+  it.each([
+    ['Iuri Andreazza', 'https://iuriandreazza.com.br'],
+    ['Noûs', 'https://nous.biz'],
+    ['ZeroServer', 'https://zeroserver.cc'],
+  ])('links to %s in a new tab, with an icon of this site', (name, href) => {
+    render(<App services={createFakeServices().services} />);
+
+    const link = screen.getByRole('link', { name }) as HTMLAnchorElement;
+
+    expect(link.getAttribute('href')).toBe(href);
+    expect(link.target).toBe('_blank');
+    expect(link.rel).toContain('noopener');
+    // The content security policy blocks an image of any other origin, and it does so silently.
+    expect(link.querySelector('img')?.getAttribute('src')).toMatch(/^\/credits\/[\w-]+\.(png|svg)$/);
+  });
+
+  it('leaves Enter to a credit link that has the focus instead of starting a run', () => {
+    const { services, games } = createFakeServices();
+    render(<App services={services} />);
+
+    const followed = fireEvent.keyDown(screen.getByRole('link', { name: 'Noûs' }), { code: 'Enter' });
+
+    expect(followed, 'Enter was taken from the link').toBe(true);
+    expect(games).toHaveLength(0);
+  });
+
   it('invites the first pilot when the board is empty', async () => {
     render(<App services={createFakeServices().services} />);
     expect(await screen.findByText(/no scores yet/i)).toBeTruthy();

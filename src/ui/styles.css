@@ -145,6 +145,41 @@ body {
   padding-bottom: 1rem;
 }
 
+.credits {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem 1.25rem;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.credits a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.credits a:hover,
+.credits a:focus-visible {
+  color: var(--ink);
+  text-decoration: underline;
+}
+
+/* Only the decorative icon is dimmed: fading the text as well would take it below the contrast it needs. */
+.credits img {
+  border-radius: 0.2rem;
+  opacity: 0.75;
+}
+
+.credits a:hover img,
+.credits a:focus-visible img {
+  opacity: 1;
+}
+
 .controls {
   display: grid;
   gap: 0.4rem;
