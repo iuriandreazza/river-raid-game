@@ -1,6 +1,6 @@
 export const INITIALS_LENGTH = 3;
 
-const INITIALS_PATTERN = /^[A-Z0-9]{3}$/;
+const INITIALS_PATTERN = new RegExp(`^[A-Z0-9]{${INITIALS_LENGTH}}$`);
 
 /** Uppercases the input and drops everything but A–Z and 0–9, keeping at most {@link INITIALS_LENGTH} characters. */
 export function sanitizeInitials(input: string): string {
