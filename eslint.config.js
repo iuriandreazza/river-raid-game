@@ -26,6 +26,9 @@ const clientLayerRules = {
     { group: ['react', 'react-dom', 'react-dom/*'], message: 'Adapters must not depend on React.' },
     { group: ['**/ui/**'], message: 'Adapters cannot depend on the UI layer.' },
   ]),
+  ui: forbidImports([
+    { group: ['**/infrastructure/**'], message: 'Screens get their adapters from the services the composition root provides.' },
+  ]),
 };
 
 const serverLayerRules = {
@@ -56,6 +59,7 @@ export default defineConfig([
   { files: ['shared/game/**/*.ts'], ignores: ['**/*.test.*'], rules: clientLayerRules.domain },
   { files: ['src/application/**/*.{ts,tsx}'], ignores: ['**/*.test.*'], rules: clientLayerRules.application },
   { files: ['src/infrastructure/**/*.{ts,tsx}'], ignores: ['**/*.test.*'], rules: clientLayerRules.infrastructure },
+  { files: ['src/ui/**/*.{ts,tsx}'], ignores: ['**/*.test.*'], rules: clientLayerRules.ui },
   { files: ['server/domain/**/*.ts'], ignores: ['**/*.test.*'], rules: serverLayerRules.domain },
   { files: ['server/application/**/*.ts'], ignores: ['**/*.test.*'], rules: serverLayerRules.application },
 ]);
