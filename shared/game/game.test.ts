@@ -35,6 +35,13 @@ class OpenRiver extends World {
   }
 }
 
+/** The same wide river with an island in the middle, where the jet starts. */
+class RiverWithIsland extends OpenRiver {
+  override rowAt(): RiverRow {
+    return { left: 8, right: SCREEN_WIDTH - 8, islandLeft: 70, islandRight: 90 };
+  }
+}
+
 const input = (overrides: Partial<Input> = {}): Input => ({ ...NO_INPUT, ...overrides });
 
 function run(state: GameState, ticks: number, held: Input = NO_INPUT): GameEvent[] {
@@ -213,6 +220,35 @@ describe('crashing', () => {
     expect(state.enemies.length + state.depots.length).toBe(before);
   });
 
+  it.each([
+    { playerX: 8, crashes: false },
+    { playerX: 7, crashes: true },
+    { playerX: SCREEN_WIDTH - 8 - PLAYER_WIDTH, crashes: false },
+    { playerX: SCREEN_WIDTH - 8 - PLAYER_WIDTH + 1, crashes: true },
+  ])('crashes against a bank only when overlapping it: jet at column $playerX -> $crashes', ({ playerX, crashes }) => {
+    const state = openGame();
+    state.playerX = playerX;
+    run(state, 1);
+    expect(state.phase).toBe(crashes ? 'dying' : 'playing');
+  });
+
+  it('loses the jet against an island', () => {
+    const state = createGame(new RiverWithIsland());
+    expect(run(state, 1)).toContainEqual({ type: 'jetLost', cause: 'terrain' });
+  });
+
+  it('plays on with the last spare jet and ends the game with the next crash', () => {
+    const state = openGame();
+    state.reserveJets = 1;
+
+    crashJet(state);
+    expect(run(state, DEATH_TICKS)).toContainEqual({ type: 'respawned' });
+    expect(state.reserveJets).toBe(0);
+
+    crashJet(state);
+    expect(run(state, DEATH_TICKS)).toContainEqual({ type: 'gameOver' });
+  });
+
   it('ends the game when the last jet is lost', () => {
     const state = openGame();
     state.reserveJets = 0;
@@ -229,7 +265,7 @@ describe('crashing', () => {
     expect(run(state, 1)).toContainEqual({ type: 'jetLost', cause: 'enemy' });
   });
 
-  it('does not stop scrolling the world into the jet while dying', () => {
+  it('stops scrolling the world while the jet is dying', () => {
     const state = openGame();
     crashJet(state);
     const scroll = state.scroll;
@@ -374,6 +410,10 @@ describe('score and spare jets', () => {
     enemyAhead(state, 'tanker', 40);
     return shootOnce(state);
   }
+
+  it('pays what the original game paid for every target', () => {
+    expect(POINTS).toEqual({ tanker: 30, helicopter: 60, fuel: 80, jet: 100, bridge: 500 });
+  });
 
   it('awards a spare jet for every 10,000 points', () => {
     const state = openGame();
