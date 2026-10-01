@@ -1,4 +1,6 @@
+import { EXTRA_JET_EVERY, POINTS } from '../domain/constants.ts';
 import { Leaderboard } from './Leaderboard.tsx';
+import { formatScore } from './LeaderboardTable.tsx';
 import type { AppServices } from './services.ts';
 import { useHotkeys } from './useHotkeys.ts';
 
@@ -6,6 +8,14 @@ interface TitleScreenProps {
   services: AppServices;
   onStart: () => void;
 }
+
+const SCORING: ReadonlyArray<readonly [target: string, points: number]> = [
+  ['Tanker', POINTS.tanker],
+  ['Helicopter', POINTS.helicopter],
+  ['Fuel depot', POINTS.fuel],
+  ['Jet', POINTS.jet],
+  ['Bridge', POINTS.bridge],
+];
 
 const CONTROLS: ReadonlyArray<readonly [keys: string[], action: string]> = [
   [['←', '→'], 'Steer'],
@@ -49,6 +59,16 @@ export function TitleScreen({ services, onStart }: TitleScreenProps) {
       <section className="panel">
         <h2 className="panel__title">Top pilots</h2>
         <Leaderboard leaderboard={services.leaderboard} />
+        <h2 className="panel__title">Scoring</h2>
+        <dl className="controls">
+          {SCORING.map(([target, points]) => (
+            <div key={target} className="controls__row">
+              <dt>{target}</dt>
+              <dd>{points}</dd>
+            </div>
+          ))}
+        </dl>
+        <p className="hint">A spare jet for every {formatScore(EXTRA_JET_EVERY)} points.</p>
       </section>
 
       <footer className="footer muted">

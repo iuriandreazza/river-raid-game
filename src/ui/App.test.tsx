@@ -38,6 +38,14 @@ describe('title screen', () => {
     expect(within(table).getByText('BBB')).toBeTruthy();
   });
 
+  it('explains what every target is worth', () => {
+    render(<App services={createFakeServices().services} />);
+
+    expect(screen.getByText('Bridge').nextElementSibling?.textContent).toBe('500');
+    expect(screen.getByText('Tanker').nextElementSibling?.textContent).toBe('30');
+    expect(screen.getByText(/spare jet for every 10,000 points/i)).toBeTruthy();
+  });
+
   it('invites the first pilot when the board is empty', async () => {
     render(<App services={createFakeServices().services} />);
     expect(await screen.findByText(/no scores yet/i)).toBeTruthy();
