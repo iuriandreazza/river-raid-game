@@ -88,7 +88,8 @@ export class GameSession implements RunningGame {
     const input = this.options.input.read();
     const wasOver = this.state.phase === 'gameOver';
     const events = advance(this.state, input);
-    // The recording ends with the tick that lost the last jet: what follows is only the banner staying up.
+    // The recording ends with the tick in which the game turns over, once the last jet has finished exploding:
+    // what follows is only the banner staying up.
     if (!wasOver) this.recorder.record(input);
     for (const event of events) this.options.sound.play(event);
 

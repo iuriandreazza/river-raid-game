@@ -94,8 +94,8 @@ export type ReplayVerdict =
   | { ok: false; reason: 'unfinished' | 'continued_after_game_over' };
 
 /**
- * Plays the replay from the very start of a game. A real run ends the moment the last jet is lost, so a replay
- * that stops before that, or goes on after it, is not a recording of a finished game.
+ * Plays the replay from the very start of a game. A real run ends the moment the game turns over, when the last jet
+ * has finished exploding, so a replay that stops before that, or goes on after it, is not a recording of a finished game.
  * The shape must have been checked with {@link replayProblem}.
  */
 export function verifyReplay(replay: Replay): ReplayVerdict {
