@@ -23,7 +23,7 @@ How the global leaderboard is protected from being forged, flooded or defaced, c
   3. one automated test per control, listed in the tables, so that a regression fails the build;
   4. manual checks of the running, built server: the security headers on every kind of response (errors and 404s included), the cache headers, content types, the absence of version headers, a real game played in a browser and saved to the board, and the stored recording played again with `pnpm moderate reverify`;
   5. `pnpm audit`: no known vulnerabilities at the time of the review.
-- **Not done:** a penetration test by a third party, and a test of the container image (the Docker daemon was off while this was written). The hardened `docker run` flags below are therefore the recommended configuration, not a tested one.
+- **Not done:** a penetration test by a third party. The CI builds the container image and runs it with the hardening flags below on a fresh volume (health check, page, a write to the database, the moderation command, a non-root process), but for amd64 only: the arm64 build runs for the first time on `main`.
 
 ## What is protected, and from whom
 
@@ -163,7 +163,7 @@ Levels 1 and 2 where they apply to a public, anonymous service, plus a few level
 - **The blocklist is short** and aimed at English and Portuguese. Anything craftier is for the moderation command.
 - **The game loop is outside React,** so an exception in it is not caught by the error boundary. The engine is fuzzed (random controls recorded and verified) to make that unlikely.
 - **The engine is assumed deterministic across browsers.** It uses only arithmetic that ECMAScript defines exactly; the golden runs and the river digest run in Node, so a divergence in a browser would show up as refused honest runs, never as accepted forged ones.
-- **No third-party penetration test** and no tested container image.
+- **No third-party penetration test.**
 
 ## Operating the leaderboard
 
@@ -172,7 +172,7 @@ Levels 1 and 2 where they apply to a public, anonymous service, plus a few level
 - The pipeline and the platform that hosts the game are described in [deploy.md](deploy.md). On the ZeroServer Community Cloud the gateway terminates HTTPS and the app runs as one instance.
 - Put the server behind HTTPS. Set `TRUST_PROXY` to the number of reverse proxies that append to `X-Forwarded-For` (`1` for a single platform proxy), otherwise every client shares the proxy's allowance. Leave it at `0` when clients reach the server directly.
 - Keep the database on a persistent volume. Only one instance may use it.
-- Suggested container flags: `--read-only --tmpfs /tmp --cap-drop ALL --security-opt no-new-privileges -v river-raid-data:/data` (untested, see above).
+- Suggested container flags: `--read-only --tmpfs /tmp --cap-drop ALL --security-opt no-new-privileges -v river-raid-data:/data` (the CI runs the image with them).
 
 **Logs.** One JSON line per event on standard error: `rate_limited`, `unsupported_media_type`, `payload_too_large`, `submission_refused` (with `code`, `reason`, a 12-character reference of the session and the length of the run). A run of `invalid_replay` or `score_mismatch` from one place is someone trying; an `engine_error` is an honest run that hit a bug and deserves an issue.
 

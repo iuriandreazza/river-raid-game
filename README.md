@@ -81,7 +81,7 @@ docker run -p 8080:8080 -v river-raid-data:/data \
   --read-only --tmpfs /tmp --cap-drop ALL --security-opt no-new-privileges river-raid
 ```
 
-These flags are the recommended hardening; the image itself has not been exercised by the project's automated checks. Run one instance per database: the rate limiter lives in memory and SQLite has a single writer.
+These flags are the recommended hardening, and the CI builds the image and runs it with exactly them on a fresh volume. Run one instance per database: the rate limiter lives in memory and SQLite has a single writer.
 
 ### Deploying
 
