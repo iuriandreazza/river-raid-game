@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MAX_SCORE_PER_SECOND } from '../../shared/scoring-limits.ts';
+import { MAX_SCORE_PER_SECOND } from '../scoring-limits.ts';
 import {
   FUEL_DRAIN_PER_TICK,
   OBJECT_SIZES,

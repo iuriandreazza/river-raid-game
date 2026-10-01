@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { OBJECT_SIZES, PLAYER_HEIGHT, PLAYER_WIDTH } from '../../domain/constants.ts';
+import { OBJECT_SIZES, PLAYER_HEIGHT, PLAYER_WIDTH } from '../../../shared/game/constants.ts';
 import { SPRITES, type SpriteDefinition } from './spriteDefinitions.ts';
 
 function dimensions(sprite: SpriteDefinition): { width: number; height: number } {

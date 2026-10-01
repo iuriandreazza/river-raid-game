@@ -1,5 +1,5 @@
-import { DASHBOARD_HEIGHT, LOW_FUEL_THRESHOLD, PLAYFIELD_HEIGHT, SCREEN_WIDTH } from '../../domain/constants.ts';
-import type { GameState } from '../../domain/types.ts';
+import { DASHBOARD_HEIGHT, LOW_FUEL_THRESHOLD, PLAYFIELD_HEIGHT, SCREEN_WIDTH } from '../../../shared/game/constants.ts';
+import type { GameState } from '../../../shared/game/types.ts';
 import { COLORS } from './palette.ts';
 import { drawCenteredText, drawText } from './pixelFont.ts';
 

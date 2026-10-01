@@ -6,9 +6,9 @@ import {
   PLAYFIELD_HEIGHT,
   SCREEN_HEIGHT,
   SCREEN_WIDTH,
-} from '../../domain/constants.ts';
-import type { Enemy, GameState } from '../../domain/types.ts';
-import { jetColumn, screenRowOf } from '../../domain/view.ts';
+} from '../../../shared/game/constants.ts';
+import type { Enemy, GameState } from '../../../shared/game/types.ts';
+import { jetColumn, screenRowOf } from '../../../shared/game/view.ts';
 import { drawDashboard } from './dashboard.ts';
 import { drawExplosion } from './explosions.ts';
 import { COLORS } from './palette.ts';

@@ -1,6 +1,6 @@
-import { BRIDGE_CHANNEL_WIDTH, BRIDGE_HEIGHT, EXPLOSION_TICKS } from '../../domain/constants.ts';
-import type { Explosion } from '../../domain/types.ts';
-import { screenRowOf } from '../../domain/view.ts';
+import { BRIDGE_CHANNEL_WIDTH, BRIDGE_HEIGHT, EXPLOSION_TICKS } from '../../../shared/game/constants.ts';
+import type { Explosion } from '../../../shared/game/types.ts';
+import { screenRowOf } from '../../../shared/game/view.ts';
 import { COLORS } from './palette.ts';
 
 const MAX_RADIUS = { small: 9, plane: 13 } as const;

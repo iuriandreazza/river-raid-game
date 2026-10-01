@@ -1,5 +1,5 @@
 import type { ApiErrorCode, LeaderboardEntry } from '../../shared/leaderboard-contract.ts';
-import type { GameEvent, GameState, Input } from '../domain/types.ts';
+import type { GameEvent, GameState, Input } from '../../shared/game/types.ts';
 
 export interface InputPort {
   /** Current state of the controls. */

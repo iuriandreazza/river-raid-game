@@ -1,6 +1,6 @@
 import type { SoundPort } from '../../application/ports.ts';
-import { LOW_FUEL_THRESHOLD } from '../../domain/constants.ts';
-import type { GameEvent, GameState, SpeedLevel } from '../../domain/types.ts';
+import { LOW_FUEL_THRESHOLD } from '../../../shared/game/constants.ts';
+import type { GameEvent, GameState, SpeedLevel } from '../../../shared/game/types.ts';
 
 const MASTER_VOLUME = 0.25;
 /** The drone rises with the scroll speed, as in the original. */

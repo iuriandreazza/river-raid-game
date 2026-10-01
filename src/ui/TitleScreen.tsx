@@ -1,4 +1,4 @@
-import { EXTRA_JET_EVERY, POINTS } from '../domain/constants.ts';
+import { EXTRA_JET_EVERY, POINTS } from '../../shared/game/constants.ts';
 import { Leaderboard } from './Leaderboard.tsx';
 import { formatScore } from './LeaderboardTable.tsx';
 import type { AppServices } from './services.ts';

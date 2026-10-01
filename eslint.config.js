@@ -53,7 +53,7 @@ export default defineConfig([
     files: ['server/**/*.ts', 'vite.config.ts', 'eslint.config.js'],
     languageOptions: { globals: globals.node },
   },
-  { files: ['src/domain/**/*.{ts,tsx}'], ignores: ['**/*.test.*'], rules: clientLayerRules.domain },
+  { files: ['shared/game/**/*.ts'], ignores: ['**/*.test.*'], rules: clientLayerRules.domain },
   { files: ['src/application/**/*.{ts,tsx}'], ignores: ['**/*.test.*'], rules: clientLayerRules.application },
   { files: ['src/infrastructure/**/*.{ts,tsx}'], ignores: ['**/*.test.*'], rules: clientLayerRules.infrastructure },
   { files: ['server/domain/**/*.ts'], ignores: ['**/*.test.*'], rules: serverLayerRules.domain },

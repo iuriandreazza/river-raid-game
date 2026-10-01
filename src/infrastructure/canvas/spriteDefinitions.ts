@@ -1,4 +1,4 @@
-import { PLAYER_SHAPE } from '../../domain/constants.ts';
+import { PLAYER_SHAPE } from '../../../shared/game/constants.ts';
 import { COLORS } from './palette.ts';
 import { glyphRows } from './pixelFont.ts';
 

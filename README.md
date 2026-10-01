@@ -101,17 +101,19 @@ It does not stop someone who replays the protocol patiently with plausible numbe
 ## How it is built
 
 ```
-src/
-  domain/          the game: river generation, objects, collisions, scoring (pure TypeScript, no DOM, no React)
+shared/
+  game/            the game: river generation, objects, collisions, scoring (pure TypeScript, no DOM, no React);
+                   the API runs the same code to re-play a run
+  leaderboard-contract.ts   the wire format, used by both sides
+src/               the web client
   application/     ports and the fixed-timestep game loop
   infrastructure/  adapters: canvas renderer, keyboard, Web Audio, HTTP client, localStorage
   ui/              React screens: title, game, game over, leaderboard
   compositionRoot.ts   wires the ports to their adapters
-server/
+server/            the API
   domain/          session and score rules
   application/     use cases and ports
   infrastructure/  SQLite and in-memory stores, Hono routes
-shared/            the leaderboard contract, used by both sides
 docs/adr/          architecture decisions
 ```
 

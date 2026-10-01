@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createGame } from '../domain/game.ts';
-import { NO_INPUT, type GameEvent, type GameState, type Input } from '../domain/types.ts';
+import { createGame } from '../../shared/game/game.ts';
+import { NO_INPUT, type GameEvent, type GameState, type Input } from '../../shared/game/types.ts';
 import { GameSession } from './gameSession.ts';
 import type { FrameScheduler, InputPort, RendererPort, SoundPort } from './ports.ts';
 

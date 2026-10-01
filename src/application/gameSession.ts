@@ -1,6 +1,6 @@
-import { TICKS_PER_SECOND } from '../domain/constants.ts';
-import { advance, createGame } from '../domain/game.ts';
-import type { GameState } from '../domain/types.ts';
+import { TICKS_PER_SECOND } from '../../shared/game/constants.ts';
+import { advance, createGame } from '../../shared/game/game.ts';
+import type { GameState } from '../../shared/game/types.ts';
 import type { FrameScheduler, InputPort, RendererPort, RunningGame, SoundPort } from './ports.ts';
 
 const TICK_MS = 1000 / TICKS_PER_SECOND;

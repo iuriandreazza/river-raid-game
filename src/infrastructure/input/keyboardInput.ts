@@ -1,5 +1,5 @@
 import type { InputPort } from '../../application/ports.ts';
-import type { Input } from '../../domain/types.ts';
+import type { Input } from '../../../shared/game/types.ts';
 
 const KEY_BINDINGS: Record<keyof Input, readonly string[]> = {
   left: ['ArrowLeft', 'KeyA'],

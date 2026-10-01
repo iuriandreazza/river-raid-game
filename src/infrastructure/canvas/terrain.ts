@@ -1,7 +1,7 @@
-import { BRIDGE_HEIGHT, PLAYFIELD_HEIGHT, SCREEN_WIDTH } from '../../domain/constants.ts';
-import type { GameState } from '../../domain/types.ts';
-import { worldRowAt } from '../../domain/view.ts';
-import type { RiverRow } from '../../domain/river.ts';
+import { BRIDGE_HEIGHT, PLAYFIELD_HEIGHT, SCREEN_WIDTH } from '../../../shared/game/constants.ts';
+import type { GameState } from '../../../shared/game/types.ts';
+import { worldRowAt } from '../../../shared/game/view.ts';
+import type { RiverRow } from '../../../shared/game/river.ts';
 import { COLORS } from './palette.ts';
 
 interface BridgePalette {

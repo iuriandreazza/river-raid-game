@@ -20,7 +20,7 @@ The game has to run in the browser with React, look like a 160×192 console game
 
 Split the web client in four layers that only depend inwards, with the browser kept at the edge:
 
-- **`src/domain`**: the game as plain TypeScript. `advance(state, input)` moves the world by one tick and returns the events that happened (a missile was fired, a bridge fell, a jet was lost). No DOM, no React, no clock, no randomness other than a seeded generator. The river is a pure function of the section number.
+- **`shared/game`** (the domain): the game as plain TypeScript, shared by the web client and the API, which re-plays recorded runs with it (see ADR 0003). It lives outside `src/` so that the server never depends on the web app. `advance(state, input)` moves the world by one tick and returns the events that happened (a missile was fired, a bridge fell, a jet was lost). No DOM, no React, no clock, no randomness other than a seeded generator. The river is a pure function of the section number.
 - **`src/application`**: ports (`InputPort`, `RendererPort`, `SoundPort`, `FrameScheduler`, `LeaderboardPort`, `Preferences`) and `GameSession`, which runs the engine at a fixed 60 ticks per second whatever the refresh rate.
 - **`src/infrastructure`**: adapters for the ports: canvas renderer, keyboard, Web Audio, `fetch`, `localStorage`.
 - **`src/ui`**: React screens. They draw menus; they never hold per-frame state. The game screen creates the session in an effect and disposes it in the cleanup, which keeps Strict Mode's double mounting harmless.
