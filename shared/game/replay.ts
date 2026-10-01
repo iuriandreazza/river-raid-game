@@ -1,5 +1,5 @@
 import { TICKS_PER_SECOND } from './constants.ts';
-import { advance, createGame } from './game.ts';
+import { advance, createGame, effectiveInput } from './game.ts';
 import type { Input } from './types.ts';
 
 /**
@@ -90,7 +90,17 @@ export function replayProblem(value: unknown): string | null {
 }
 
 export type ReplayVerdict =
-  | { ok: true; score: number; ticks: number }
+  | {
+      ok: true;
+      score: number;
+      ticks: number;
+      /**
+       * The same game written down with only the controls the engine acted on: whatever it ignored is cleared (see
+       * `effectiveInput`). Recordings of the same game, however they are dressed up, have the same `effective` replay,
+       * and playing it gives the very same game back.
+       */
+      effective: Replay;
+    }
   | { ok: false; reason: 'unfinished' | 'continued_after_game_over' };
 
 /**
@@ -100,15 +110,17 @@ export type ReplayVerdict =
  */
 export function verifyReplay(replay: Replay): ReplayVerdict {
   const state = createGame();
+  const effective = new ReplayRecorder();
   let ticks = 0;
   for (let i = 0; i < replay.length; i += 2) {
     const input = decodeInput(replay[i]!);
     for (let held = 0; held < replay[i + 1]!; held++) {
       if (state.phase === 'gameOver') return { ok: false, reason: 'continued_after_game_over' };
+      effective.record(effectiveInput(state, input));
       advance(state, input);
       ticks++;
     }
   }
   if (state.phase !== 'gameOver') return { ok: false, reason: 'unfinished' };
-  return { ok: true, score: state.score, ticks };
+  return { ok: true, score: state.score, ticks, effective: effective.replay() };
 }

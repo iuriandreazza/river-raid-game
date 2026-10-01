@@ -93,7 +93,7 @@ describe('verifyReplay', () => {
   const run = recordRun(cautiousPilot);
 
   it('arrives at the score of the session that recorded it', () => {
-    expect(verifyReplay(run.replay)).toEqual({ ok: true, score: run.score, ticks: run.ticks });
+    expect(verifyReplay(run.replay)).toMatchObject({ ok: true, score: run.score, ticks: run.ticks });
     expect(replayTicks(run.replay)).toBe(run.ticks);
   });
 
@@ -116,7 +116,7 @@ describe('verifyReplay', () => {
     for (let seed = 1; seed <= 100; seed++) {
       const random = recordRun(noisyPolicy(seed));
       expect(replayProblem(random.replay), `seed ${seed}`).toBeNull();
-      expect(verifyReplay(random.replay), `seed ${seed}`).toEqual({ ok: true, score: random.score, ticks: random.ticks });
+      expect(verifyReplay(random.replay), `seed ${seed}`).toMatchObject({ ok: true, score: random.score, ticks: random.ticks });
     }
   });
 
@@ -124,6 +124,62 @@ describe('verifyReplay', () => {
     const handsOff = run.replay.map((value, index) => (index % 2 === 0 ? 0 : value));
     const verdict = verifyReplay(handsOff);
     expect(verdict.ok && verdict.score === run.score).toBe(false);
+  });
+});
+
+/** What a player may also be pressing without any effect: the same game, written down differently. */
+function withIgnoredControls(policy: (state: GameState, tick: number) => Input, seed: number) {
+  let random = seed >>> 0;
+  const next = (): number => {
+    random = (Math.imul(random, 1664525) + 1013904223) >>> 0;
+    return random / 4294967296;
+  };
+  const sometimesBoth = (first: boolean, second: boolean): [boolean, boolean] =>
+    !first && !second && next() < 0.3 ? [true, true] : [first, second];
+
+  return (state: GameState, tick: number): Input => {
+    const wanted = policy(state, tick);
+    if (state.phase !== 'playing') {
+      return { left: next() < 0.5, right: next() < 0.5, up: next() < 0.5, down: next() < 0.5, fire: next() < 0.5 };
+    }
+    const [left, right] = sometimesBoth(wanted.left, wanted.right);
+    const [up, down] = sometimesBoth(wanted.up, wanted.down);
+    return { left, right, up, down, fire: state.missile === null ? wanted.fire : next() < 0.5 };
+  };
+}
+
+describe('the effective replay of a verdict', () => {
+  const verified = (replay: readonly number[]) => {
+    const verdict = verifyReplay(replay);
+    if (!verdict.ok) throw new Error(`the run should have verified: ${verdict.reason}`);
+    return verdict;
+  };
+
+  it('is a replay the API would accept, and playing it gives the very same game back', () => {
+    const { replay } = recordRun(cautiousPilot);
+    const verdict = verified(replay);
+
+    expect(replayProblem(verdict.effective)).toBeNull();
+    expect(verifyReplay(verdict.effective)).toEqual(verdict);
+  });
+
+  it('is the same for a game written down with controls that the engine ignores', () => {
+    for (let seed = 1; seed <= 15; seed++) {
+      const plain = recordRun(noisyPolicy(seed));
+      const dressedUp = recordRun(withIgnoredControls(noisyPolicy(seed), seed));
+
+      expect(dressedUp.replay, `seed ${seed} was not dressed up`).not.toEqual(plain.replay);
+      expect(replayProblem(dressedUp.replay), `seed ${seed}`).toBeNull();
+      expect(verified(dressedUp.replay), `seed ${seed}`).toEqual(verified(plain.replay));
+    }
+  });
+
+  it('is different for a game that differs in a control that matters', () => {
+    const { replay } = GOLDEN_RUNS[2]!;
+    const [controls, ticks, ...rest] = replay;
+    const steeredOnceMore = [encodeInput(input({ left: true })), 1, controls!, ticks! - 1, ...rest];
+
+    expect(verifyReplay(steeredOnceMore)).not.toEqual(verified(replay));
   });
 });
 
@@ -168,6 +224,6 @@ describe('golden runs', () => {
     expect(
       verifyReplay(replay),
       'The rules changed what this run leads to. If that is intended, bump ENGINE_VERSION in replay.ts and run `pnpm record-golden-runs`.',
-    ).toEqual({ ok: true, score, ticks });
+    ).toMatchObject({ ok: true, score, ticks });
   });
 });

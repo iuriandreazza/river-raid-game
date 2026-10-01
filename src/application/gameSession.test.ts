@@ -132,7 +132,7 @@ describe('GameSession', () => {
     expect(onGameOver).toHaveBeenCalledTimes(1);
     const { score, replay } = vi.mocked(onGameOver).mock.calls[0]![0] as RunResult;
     expect(score).toBeGreaterThan(0);
-    expect(verifyReplay(replay)).toEqual({ ok: true, score, ticks: replayTicks(replay) });
+    expect(verifyReplay(replay)).toMatchObject({ ok: true, score, ticks: replayTicks(replay) });
   });
 
   it('passes the mute setting to the speakers', () => {
