@@ -14,7 +14,7 @@ function fillDisc(ctx: CanvasRenderingContext2D, centerX: number, centerY: numbe
   }
 }
 
-/** A fireball grows quickly, then burns down from white to embers. */
+/** A fireball grows quickly, then goes out from the rim inwards: the bright core is the last layer to vanish. */
 function drawFireball(
   ctx: CanvasRenderingContext2D,
   centerX: number,

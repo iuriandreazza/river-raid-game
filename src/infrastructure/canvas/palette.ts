@@ -1,11 +1,14 @@
+const YELLOW = '#f4e04d';
+const ORANGE = '#e8902a';
+
 /** Colors sampled from a real console capture, nudged a little for contrast on modern screens. */
 export const COLORS = {
   water: '#0044e0',
   landLight: '#008c04',
   landDark: '#004c00',
 
-  jetYellow: '#f4e04d',
-  jetOrange: '#e8902a',
+  jetYellow: YELLOW,
+  jetOrange: ORANGE,
   missile: '#fff4a0',
 
   fuelBody: '#d2548c',
@@ -36,8 +39,8 @@ export const COLORS = {
   hudAlert: '#e8402a',
 
   explosionCore: '#fff8c0',
-  explosionYellow: '#f4e04d',
-  explosionOrange: '#e8902a',
+  explosionYellow: YELLOW,
+  explosionOrange: ORANGE,
   explosionRed: '#c02818',
   explosionEmber: '#601810',
 

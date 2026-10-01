@@ -44,15 +44,14 @@ const GLYPHS: Readonly<Record<string, readonly string[]>> = {
   '?': ['##.', '..#', '.#.', '...', '.#.'],
 };
 
-export const GLYPH_WIDTH = 3;
-export const GLYPH_HEIGHT = 5;
+const GLYPH_WIDTH = 3;
 const GLYPH_ADVANCE = GLYPH_WIDTH + 1;
 
 export function glyphRows(character: string): readonly string[] {
   return GLYPHS[character.toUpperCase()] ?? GLYPHS['?']!;
 }
 
-export function textWidth(text: string, scale = 1): number {
+function textWidth(text: string, scale = 1): number {
   return Math.max(0, text.length * GLYPH_ADVANCE - 1) * scale;
 }
 
