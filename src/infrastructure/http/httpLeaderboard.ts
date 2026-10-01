@@ -62,7 +62,11 @@ export class HttpLeaderboard implements LeaderboardPort {
     }
 
     if (!response.ok) throw await toLeaderboardError(response);
-    return (await response.json()) as T;
+    try {
+      return (await response.json()) as T;
+    } catch {
+      throw new LeaderboardError('unexpected', 'The leaderboard sent an answer that could not be read.');
+    }
   }
 }
 

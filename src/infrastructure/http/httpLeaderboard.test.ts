@@ -80,6 +80,11 @@ describe('HttpLeaderboard', () => {
     await expect(leaderboard.topScores()).rejects.toMatchObject({ name: 'LeaderboardError', code: 'network' });
   });
 
+  it('copes with a successful answer that is not JSON', async () => {
+    const { leaderboard } = leaderboardAnswering(new Response('<html>Welcome</html>', { status: 200 }));
+    await expect(leaderboard.topScores()).rejects.toMatchObject({ name: 'LeaderboardError', code: 'unexpected' });
+  });
+
   it('copes with answers that are not the API error format', async () => {
     const { leaderboard } = leaderboardAnswering(new Response('<html>Bad gateway</html>', { status: 502 }));
     await expect(leaderboard.topScores()).rejects.toMatchObject({ code: 'unexpected' });
