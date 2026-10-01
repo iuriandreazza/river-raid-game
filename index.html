@@ -3,10 +3,32 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="A browser tribute to the Atari 2600 classic River Raid, with a global leaderboard." />
+    <title>River Raid — a free browser tribute to the Atari 2600 classic</title>
+    <meta name="description" content="Fly upstream, blow up the bridges and never run out of fuel. A free browser tribute to the Atari 2600 classic River Raid, with a global leaderboard." />
+    <meta name="author" content="Iuri Andreazza" />
     <meta name="theme-color" content="#0b0d1a" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <title>River Raid</title>
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+    <!--
+      Link previews. Crawlers do not run scripts and only follow absolute URLs, so the address of the site is written out
+      in the canonical link, og:url and og:image: change all three if the site moves.
+    -->
+    <link rel="canonical" href="https://app-3a8b3530.apps.zeroserver.cc/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="River Raid" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:url" content="https://app-3a8b3530.apps.zeroserver.cc/" />
+    <meta property="og:title" content="River Raid — a free browser tribute to the Atari 2600 classic" />
+    <meta property="og:description" content="Fly upstream, blow up the bridges and never run out of fuel. A free browser tribute to the Atari 2600 classic River Raid, with a global leaderboard." />
+    <meta property="og:image" content="https://app-3a8b3530.apps.zeroserver.cc/og-image.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="A yellow jet flying up a blue river between green banks, with a tanker, a fuel depot, a helicopter and an explosion ahead." />
+    <!-- X reads the og: tags too; it only needs to be told to show the large card, and has its own alt text. -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image:alt" content="A yellow jet flying up a blue river between green banks, with a tanker, a fuel depot, a helicopter and an explosion ahead." />
   </head>
   <body>
     <div id="root"></div>
