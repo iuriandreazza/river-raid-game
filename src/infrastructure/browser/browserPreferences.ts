@@ -1,8 +1,9 @@
 import { sanitizeInitials } from '../../../shared/initials.ts';
-import type { Preferences } from '../../application/ports.ts';
+import type { AnalyticsConsent, Preferences } from '../../application/ports.ts';
 
 const INITIALS_KEY = 'river-raid:initials';
 const MUTED_KEY = 'river-raid:muted';
+const ANALYTICS_CONSENT_KEY = 'river-raid:analytics-consent';
 
 type KeyValueStorage = Pick<Storage, 'getItem' | 'setItem'>;
 
@@ -28,6 +29,15 @@ export class BrowserPreferences implements Preferences {
 
   saveMuted(muted: boolean): void {
     this.write(MUTED_KEY, String(muted));
+  }
+
+  loadAnalyticsConsent(): AnalyticsConsent | null {
+    const stored = this.read(ANALYTICS_CONSENT_KEY);
+    return stored === 'granted' || stored === 'denied' ? stored : null;
+  }
+
+  saveAnalyticsConsent(consent: AnalyticsConsent): void {
+    this.write(ANALYTICS_CONSENT_KEY, consent);
   }
 
   private read(key: string): string | null {

@@ -7,6 +7,7 @@ import { useHotkeys } from './useHotkeys.ts';
 interface TitleScreenProps {
   services: AppServices;
   onStart: () => void;
+  onReviewAnalytics: () => void;
 }
 
 const SCORING: ReadonlyArray<readonly [target: string, points: number]> = [
@@ -26,7 +27,7 @@ const CONTROLS: ReadonlyArray<readonly [keys: string[], action: string]> = [
   [['M'], 'Mute'],
 ];
 
-export function TitleScreen({ services, onStart }: TitleScreenProps) {
+export function TitleScreen({ services, onStart, onReviewAnalytics }: TitleScreenProps) {
   useHotkeys({ Enter: onStart, Space: onStart });
 
   return (
@@ -73,6 +74,10 @@ export function TitleScreen({ services, onStart }: TitleScreenProps) {
 
       <footer className="footer muted">
         A fan-made tribute to the 1982 Atari 2600 game by Carol Shaw. Not affiliated with or endorsed by Activision.
+        <br />
+        <button type="button" className="link-button" onClick={onReviewAnalytics}>
+          Analytics settings
+        </button>
       </footer>
     </main>
   );
