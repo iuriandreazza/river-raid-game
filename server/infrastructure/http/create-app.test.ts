@@ -579,7 +579,7 @@ describe('security headers', () => {
         'connect-src': ["'self'", 'https://www.googletagmanager.com', 'https://*.google-analytics.com', 'https://*.google.com'],
         'base-uri': ["'none'"],
         'form-action': ["'self'"],
-        'frame-ancestors': ["'none'"],
+        'frame-ancestors': ['https://escritoriio.iuriandreazza.com.br'],
       });
     });
 
