@@ -83,6 +83,10 @@ docker run -p 8080:8080 -v river-raid-data:/data \
 
 These flags are the recommended hardening, and the CI builds the image and runs it with exactly them on a fresh volume. Run one instance per database: the rate limiter lives in memory and SQLite has a single writer.
 
+### Analytics
+
+The built site counts visits with Google Analytics, in the property whose id is in `src/compositionRoot.ts`; `pnpm dev` counts nothing. A banner asks the visitor first, and a visitor who does not answer within ten seconds is counted as having accepted ([ADR 0005](docs/adr/0005-analytics-consent-by-countdown.md)). If you build your own copy, replace the id, or your visitors, and your own `pnpm build && pnpm start`, are counted in someone else's property.
+
 ### Deploying
 
 Every push to `main` is verified by [GitHub Actions](.github/workflows/ci.yml), built as a multi-architecture image and, once switched on, deployed with the `zs` CLI to the [ZeroServer Community Cloud](https://zeroserver.cc) as a single instance, with its SQLite file on a persistent volume. [`docs/deploy.md`](docs/deploy.md) has the setup, the day-to-day commands and what to expect from one instance; [ADR 0004](docs/adr/0004-single-instance-on-zeroserver.md) says why it is not several.
@@ -91,7 +95,7 @@ Every push to `main` is verified by [GitHub Actions](.github/workflows/ci.yml), 
 
 The tags that make a shared link look good (Open Graph and the X card) are in [`index.html`](index.html), and the 1200×630 picture they point to is [`public/og-image.png`](public/og-image.png). Crawlers do not run scripts and only follow absolute URLs, so the address of the site is written out in three places there: the canonical link, `og:url` and `og:image`. Change all three when the site gets another address, and ask Facebook's Sharing Debugger or LinkedIn's Post Inspector to fetch the page again, since they keep the old preview.
 
-The credits at the foot of the title screen use the icons in [`public/credits`](public/credits). They are copies on purpose: the content security policy only lets the page load images from its own origin.
+The credits at the foot of the title screen use the icons in [`public/credits`](public/credits). They are served by the site itself, not loaded from the linked sites, because the content security policy lets the page load images only from itself and the Google Analytics hosts.
 
 ### API
 

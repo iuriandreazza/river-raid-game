@@ -1,6 +1,6 @@
 import { vi } from 'vitest';
 import type { LeaderboardEntry } from '../../shared/leaderboard-contract.ts';
-import type { LeaderboardPort, Preferences, RunResult, RunningGame } from '../application/ports.ts';
+import type { AnalyticsConsent, LeaderboardPort, Preferences, RunResult, RunningGame } from '../application/ports.ts';
 import type { AppServices } from './services.ts';
 
 /** A replay that is only good enough to be passed along: the fakes never look inside it. */
@@ -24,6 +24,11 @@ export class FakeLeaderboard implements LeaderboardPort {
 export class FakePreferences implements Preferences {
   initials = '';
   muted = false;
+  consent: AnalyticsConsent | null = null;
+  loadAnalyticsConsent = vi.fn(() => this.consent);
+  saveAnalyticsConsent = vi.fn((consent: AnalyticsConsent) => {
+    this.consent = consent;
+  });
   loadInitials = vi.fn(() => this.initials);
   saveInitials = vi.fn((initials: string) => {
     this.initials = initials;
@@ -42,10 +47,12 @@ export interface FakeGame extends RunningGame {
 export function createFakeServices() {
   const leaderboard = new FakeLeaderboard();
   const preferences = new FakePreferences();
+  const analytics = { start: vi.fn(), stop: vi.fn() };
   const games: FakeGame[] = [];
   const services: AppServices = {
     leaderboard,
     preferences,
+    analytics,
     startGame: (_canvas, onGameOver) => {
       const game: FakeGame = {
         pause: vi.fn(),
@@ -58,5 +65,5 @@ export function createFakeServices() {
       return game;
     },
   };
-  return { services, leaderboard, preferences, games };
+  return { services, leaderboard, preferences, analytics, games };
 }

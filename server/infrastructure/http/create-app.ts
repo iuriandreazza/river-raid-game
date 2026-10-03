@@ -20,23 +20,25 @@ export interface AppOptions {
 const FINGERPRINTED_PREFIX = '/assets/';
 const ONE_YEAR_SECONDS = 365 * 24 * 60 * 60;
 
-/**
- * The built client runs its own script and style files and talks to this server, apart from Google Analytics: its
- * script, and the places it reports to (the hosts Google lists for a tag without advertising features). No inline
- * script is allowed, which is why the client starts Analytics from its own module.
- */
 const GOOGLE_TAG_MANAGER = 'https://www.googletagmanager.com';
 const GOOGLE_ANALYTICS = 'https://*.google-analytics.com';
+const GOOGLE = 'https://*.google.com';
 
 /** The only site allowed to show the game in an iframe. */
 const EMBEDDING_ORIGIN = 'https://escritoriio.iuriandreazza.com.br';
 
+/**
+ * The built client runs its own script and style files and talks to this server, apart from Google Analytics: its
+ * script, and the places it reports to (the hosts Google lists for a tag without advertising features). The property
+ * must keep Google signals and the advertising links off: they need hosts that are not here, and would be blocked.
+ * No inline script is allowed, which is why the client starts Analytics from its own module.
+ */
 const CONTENT_SECURITY_POLICY = {
   defaultSrc: ["'none'"],
   scriptSrc: ["'self'", GOOGLE_TAG_MANAGER],
   styleSrc: ["'self'"],
   imgSrc: ["'self'", GOOGLE_TAG_MANAGER, GOOGLE_ANALYTICS],
-  connectSrc: ["'self'", GOOGLE_TAG_MANAGER, GOOGLE_ANALYTICS, 'https://*.google.com'],
+  connectSrc: ["'self'", GOOGLE_TAG_MANAGER, GOOGLE_ANALYTICS, GOOGLE],
   baseUri: ["'none'"],
   formAction: ["'self'"],
   frameAncestors: [EMBEDDING_ORIGIN],

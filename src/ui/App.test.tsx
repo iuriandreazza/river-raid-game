@@ -8,6 +8,8 @@ import { STUB_REPLAY, createFakeServices, entry } from './testSupport.ts';
 
 afterEach(cleanup);
 
+const publicFiles = Object.keys(import.meta.glob('/public/**/*'));
+
 const press = (code: string): void => {
   act(() => {
     fireEvent.keyDown(window, { code });
@@ -58,17 +60,21 @@ describe('title screen', () => {
     expect(link.getAttribute('href')).toBe(href);
     expect(link.target).toBe('_blank');
     expect(link.rel).toContain('noopener');
-    // The content security policy blocks an image of any other origin, and it does so silently.
-    expect(link.querySelector('img')?.getAttribute('src')).toMatch(/^\/credits\/[\w-]+\.(png|svg)$/);
+    // The content security policy blocks an image of the linked sites, and it does so silently.
+    const icon = link.querySelector('img')?.getAttribute('src');
+    expect(icon).toMatch(/^\/credits\/[\w-]+\.(png|svg)$/);
+    expect(publicFiles).toContain(`/public${icon}`);
   });
 
-  it('leaves Enter to a credit link that has the focus instead of starting a run', () => {
+  it('leaves Enter and Space to a credit link that has the focus instead of starting a run', () => {
     const { services, games } = createFakeServices();
     render(<App services={services} />);
+    const link = screen.getByRole('link', { name: 'Noûs' });
 
-    const followed = fireEvent.keyDown(screen.getByRole('link', { name: 'Noûs' }), { code: 'Enter' });
+    for (const code of ['Enter', 'Space']) {
+      expect(fireEvent.keyDown(link, { code }), `${code} was taken from the link`).toBe(true);
+    }
 
-    expect(followed, 'Enter was taken from the link').toBe(true);
     expect(games).toHaveLength(0);
   });
 

@@ -7,6 +7,7 @@ import { useHotkeys } from './useHotkeys.ts';
 interface TitleScreenProps {
   services: AppServices;
   onStart: () => void;
+  onReviewAnalytics: () => void;
 }
 
 const SCORING: ReadonlyArray<readonly [target: string, points: number]> = [
@@ -33,7 +34,7 @@ const CREDITS: ReadonlyArray<{ name: string; href: string; icon: string }> = [
   { name: 'ZeroServer', href: 'https://zeroserver.cc', icon: '/credits/zeroserver.png' },
 ];
 
-export function TitleScreen({ services, onStart }: TitleScreenProps) {
+export function TitleScreen({ services, onStart, onReviewAnalytics }: TitleScreenProps) {
   useHotkeys({ Enter: onStart, Space: onStart });
 
   return (
@@ -81,8 +82,13 @@ export function TitleScreen({ services, onStart }: TitleScreenProps) {
       <footer className="footer">
         <p className="muted">
           A fan-made tribute to the 1982 Atari 2600 game by Carol Shaw. Not affiliated with or endorsed by Activision.
+          <br />
+          <button type="button" className="link-button" onClick={onReviewAnalytics}>
+            Analytics settings
+          </button>
         </p>
-        <ul className="credits">
+        {/* Safari drops the list semantics of a list without bullets unless the role says so. */}
+        <ul className="credits" role="list">
           {CREDITS.map(({ name, href, icon }) => (
             <li key={href}>
               <a href={href} target="_blank" rel="noopener">

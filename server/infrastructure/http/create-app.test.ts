@@ -571,21 +571,22 @@ describe('security headers', () => {
     it.each(['/', '/api/health', '/missing.css'])('lets the page load and report to Google Analytics, and no other foreign host (%s)', async (path) => {
       const policy = await policyOf(path);
 
-      expect(policy.get('script-src')).toEqual(["'self'", 'https://www.googletagmanager.com']);
-      expect(policy.get('connect-src')).toEqual([
-        "'self'",
-        'https://www.googletagmanager.com',
-        'https://*.google-analytics.com',
-        'https://*.google.com',
-      ]);
-      expect(policy.get('img-src')).toEqual(["'self'", 'https://www.googletagmanager.com', 'https://*.google-analytics.com']);
-      expect(policy.get('default-src')).toEqual(["'none'"]);
-      expect(policy.get('style-src')).toEqual(["'self'"]);
+      expect(Object.fromEntries(policy)).toEqual({
+        'default-src': ["'none'"],
+        'script-src': ["'self'", 'https://www.googletagmanager.com'],
+        'style-src': ["'self'"],
+        'img-src': ["'self'", 'https://www.googletagmanager.com', 'https://*.google-analytics.com'],
+        'connect-src': ["'self'", 'https://www.googletagmanager.com', 'https://*.google-analytics.com', 'https://*.google.com'],
+        'base-uri': ["'none'"],
+        'form-action': ["'self'"],
+        'frame-ancestors': ["'none'"],
+      });
     });
 
     it('never allows inline or evaluated script', async () => {
       const policy = await policyOf('/');
 
+      expect(policy.has('script-src')).toBe(true);
       for (const [directive, sources] of policy) {
         expect(sources, directive).not.toContain("'unsafe-inline'");
         expect(sources, directive).not.toContain("'unsafe-eval'");

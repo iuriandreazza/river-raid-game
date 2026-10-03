@@ -30,6 +30,23 @@ describe('BrowserPreferences', () => {
     expect(new BrowserPreferences(storage).loadInitials()).toBe('ABC');
   });
 
+  it('has no analytics answer until the visitor gives one, and remembers it afterwards', () => {
+    const storage = memoryStorage();
+    expect(new BrowserPreferences(storage).loadAnalyticsConsent()).toBeNull();
+
+    new BrowserPreferences(storage).saveAnalyticsConsent('denied');
+    expect(new BrowserPreferences(storage).loadAnalyticsConsent()).toBe('denied');
+
+    new BrowserPreferences(storage).saveAnalyticsConsent('granted');
+    expect(new BrowserPreferences(storage).loadAnalyticsConsent()).toBe('granted');
+  });
+
+  it('takes anything but an answer it knows for no answer', () => {
+    const storage = memoryStorage();
+    storage.setItem('river-raid:analytics-consent', 'maybe');
+    expect(new BrowserPreferences(storage).loadAnalyticsConsent()).toBeNull();
+  });
+
   it('keeps working when the storage is missing or throws', () => {
     const broken = new BrowserPreferences({
       getItem: () => {
@@ -40,10 +57,12 @@ describe('BrowserPreferences', () => {
       },
     });
     expect(broken.loadInitials()).toBe('');
+    expect(broken.loadAnalyticsConsent()).toBeNull();
     expect(() => broken.saveMuted(true)).not.toThrow();
 
     const missing = new BrowserPreferences(null);
     expect(missing.loadMuted()).toBe(false);
+    expect(() => missing.saveAnalyticsConsent('granted')).not.toThrow();
     expect(() => missing.saveInitials('ABC')).not.toThrow();
   });
 });
