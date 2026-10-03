@@ -549,10 +549,10 @@ describe('security headers', () => {
       const { headers } = await app.request(path);
 
       expect(headers.get('x-content-type-options')).toBe('nosniff');
-      expect(headers.get('x-frame-options')).toBe('DENY');
+      expect(headers.has('x-frame-options')).toBe(false);
       expect(headers.get('content-security-policy')).toContain("default-src 'none'");
       expect(headers.get('content-security-policy')).toContain("script-src 'self'");
-      expect(headers.get('content-security-policy')).toContain("frame-ancestors 'none'");
+      expect(headers.get('content-security-policy')).toContain('frame-ancestors https://escritoriio.iuriandreazza.com.br');
     },
   );
 
@@ -579,7 +579,7 @@ describe('security headers', () => {
         'connect-src': ["'self'", 'https://www.googletagmanager.com', 'https://*.google-analytics.com', 'https://*.google.com'],
         'base-uri': ["'none'"],
         'form-action': ["'self'"],
-        'frame-ancestors': ["'none'"],
+        'frame-ancestors': ['https://escritoriio.iuriandreazza.com.br'],
       });
     });
 
